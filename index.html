@@ -81,6 +81,7 @@ button,input{font:inherit}.app{display:flex;min-height:100vh}.side{width:250px;b
 const API="https://eybjpjhzwskfgskvnfbj.supabase.co/functions/v1/ba-control-api-v3";
 const REQUIRED_WINDOWS=["08:00","12:00","18:00","21:30"];
 let token=sessionStorage.getItem("ba_control_token")||"";
+let controlKey="";
 let selectedDate="";
 let state={analytics:null,overview:null,sources:null};
 
@@ -93,16 +94,18 @@ function setStatus(ok,msg){$("status").textContent=msg||"Connected";$("status").
 async function api(resource,date){
  const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),15000);
  try{
-  const r=await fetch(API+"?resource="+encodeURIComponent(resource)+"&date="+encodeURIComponent(date),{headers:{Authorization:"Bearer "+token},cache:"no-store",signal:ctl.signal});
+  const authHeaders=controlKey?{"x-ba-control-key":controlKey}:{Authorization:"Bearer "+token};
+  const r=await fetch(API+"?resource="+encodeURIComponent(resource)+"&date="+encodeURIComponent(date),{headers:authHeaders,cache:"no-store",signal:ctl.signal});
   const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}
   if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
   return data;
  }finally{clearTimeout(t)}
 }
 async function authenticate(t){
- token=t||""; if(!token) throw new Error("No access token");
+ if(!t) throw new Error("No access token");
+ if(controlKey){token="";}else{token=t;}
  const data=await api("analytics",selectedDate);
- sessionStorage.setItem("ba_control_token",token);
+ if(!controlKey) sessionStorage.setItem("ba_control_token",token);
  $("login").classList.add("hidden");setStatus(true,"Connected");return data;
 }
 async function boot(){
@@ -117,10 +120,10 @@ async function boot(){
 }
 async function manualLogin(){
  const k=$("keyInput").value.trim();if(!k){$("loginErr").textContent="Enter the control password.";return}
- try{await authenticate(k);await refreshAll()}catch(e){$("loginErr").textContent=e.message||"Access denied";setStatus(false,"Auth failed")}
+ try{controlKey=k;token="";await authenticate(k);await refreshAll()}catch(e){controlKey="";token="";$("loginErr").textContent=e.message||"Access denied";setStatus(false,"Auth failed")}
 }
 async function refreshAll(){
- if(!token){return}
+ if(!token&&!controlKey){return}
  setStatus(true,"Refreshing…");
  try{
   const [a,o,s]=await Promise.all([api("analytics",selectedDate),api("overview",selectedDate),api("sources",selectedDate)]);
