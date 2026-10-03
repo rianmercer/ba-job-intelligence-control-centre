@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="referrer" content="no-referrer">
-<title>BA Job Intelligence Control Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BA Job Intelligence Control Centre</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -454,6 +454,12 @@ main { padding: 22px 28px 48px; max-width: 1540px; margin: 0 auto; width: 100%; 
 .data-table { width: 100%; border-collapse: collapse; min-width: 780px; }
 .data-table th, .data-table td { padding: 12px; text-align: left; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
 .data-table th { font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 10px; background: #f8fafc; }
+
+.data-state-banner{margin:0 0 16px;padding:12px 14px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc;color:#475569;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.data-state-banner.error{border-color:#fecaca;background:#fff7f7;color:#991b1b}
+.data-state-banner .state-copy{line-height:1.45}
+.data-state-banner button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:7px 10px;font-weight:800;font-size:11px;cursor:pointer}
+
 .toast-notice {
   position: fixed; bottom: 20px; right: 20px;
   background: #0f172a; color: #ffffff; padding: 12px 18px;
@@ -493,15 +499,7 @@ main { padding: 22px 28px 48px; max-width: 1540px; margin: 0 auto; width: 100%; 
 
 <script>
 const API = "https://eybjpjhzwskfgskvnfbj.supabase.co/functions/v1/ba-control-api-v3";
-const URL_PARAMS = new URLSearchParams(location.search);
-const TODAY_IST = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date());
-const DATE_PARAM = URL_PARAMS.get("date") || "";
-const URL_ACCESS = URL_PARAMS.get("access") || "";
-const STORED_ACCESS = (() => { try { return sessionStorage.getItem("ba_control_access") || ""; } catch { return ""; } })();
-const ACCESS_TOKEN = URL_ACCESS || STORED_ACCESS;
-if (URL_ACCESS) { try { sessionStorage.setItem("ba_control_access", URL_ACCESS); } catch {} }
-const INITIAL_DATE = /^\\d{4}-\\d{2}-\\d{2}$/.test(DATE_PARAM) ? DATE_PARAM : TODAY_IST;
-const S = { key: ACCESS_TOKEN, page: "overview", selectedDate: INITIAL_DATE, data: null, analytics: null, sources: [], jobs: [] };
+const S = { key: "", token: "", page: "overview", loadSeq: 0, selectedDate: new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date()), data: null, analytics: null, sources: [], jobs: [] };
 const $ = id => document.getElementById(id);
 const arr = x => Array.isArray(x) ? x : [];
 const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -519,19 +517,21 @@ function toast(m) {
 
 async function api(resource, options = {}) {
   const method = (options.method || "GET").toUpperCase();
-  const query = "?key=" + encodeURIComponent(S.key) + "&date=" + encodeURIComponent(S.selectedDate) + (resource ? "&resource=" + encodeURIComponent(resource) : "");
+  const qp = new URLSearchParams();
+  if (S.selectedDate) qp.set("date", S.selectedDate);
+  if (resource) qp.set("resource", resource);
+  if (S.key) qp.set("key", S.key); // manual-password fallback only
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
-  const o = { ...options, signal: controller.signal };
-  if (method === "POST") {
-    o.headers = { "Content-Type": "text/plain;charset=UTF-8", ...(options.headers || {}) };
-  }
+  const headers = { ...(options.headers || {}) };
+  if (S.token) headers["Authorization"] = "Bearer " + S.token;
+  if (method === "POST") headers["Content-Type"] = "application/json";
+  const o = { ...options, method, headers, cache: "no-store", signal: controller.signal };
   try {
-    o.cache = "no-store";
-    const res = await fetch(API + query, o);
+    const res = await fetch(API + "?" + qp.toString(), o);
     const text = await res.text();
     let body = {};
-    try { body = JSON.parse(text); } catch (e) { body = { error: text }; }
+    try { body = JSON.parse(text); } catch (_) { body = { error: text }; }
     if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
     return body;
   } catch (e) {
@@ -544,63 +544,69 @@ async function api(resource, options = {}) {
 }
 
 async function load(date = S.selectedDate) {
-  S.selectedDate = date || S.selectedDate;
-  // Clear selected-day datasets before replacing them so an older day can never render stale tiles.
+  const targetDate = date || S.selectedDate;
+  const seq = ++S.loadSeq;
+  S.selectedDate = targetDate;
   S.data = null; S.analytics = null; S.jobs = [];
   const [overviewData, analyticsData] = await Promise.all([
     api("overview"),
     api("analytics")
   ]);
+  if (seq !== S.loadSeq) return false;
   S.data = overviewData || {};
   S.analytics = analyticsData || {};
   S.jobs = S.analytics.verifiedJobs || [];
   try {
     S.sources = (await api("sources")).sources || [];
   } catch (e) {
+    if (seq !== S.loadSeq) return false;
     S.sources = [];
     console.warn("Source registry unavailable:", e.message);
   }
+  return true;
 }
 
-function syncUrl(date = S.selectedDate) {
-  try {
-    const u = new URL(location.href);
-    u.searchParams.delete("access");
-    if (date) u.searchParams.set("date", date);
-    history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString());
-  } catch {}
-}
-
-function renderAccessRequired(message = "Open the Control Centre from the secure link in your EOD email.") {
+function login() {
   $("app").innerHTML = `
     <div class="login-screen">
       <div class="login-card">
         <div class="login-brand-icon">BA</div>
         <h1>BA Job Intelligence</h1>
-        <p>${esc(message)}</p>
-        <div style="font-size:11px;color:#64748b;line-height:1.6;margin-top:14px;">
-          This dashboard uses a secure, time-limited email link. No dashboard password is required.
+        <p>Live control & telemetry center for the Business Analyst search engine.</p>
+        <div class="login-input-group">
+          <label>Control-Center Password</label>
+          <input id="pw" type="password" class="login-input" autocomplete="current-password" placeholder="Enter engine master password">
         </div>
+        <button id="loginBtn" class="login-submit-btn">Unlock Engine & Access Dashboard</button>
+         <div style="font-size:10px;color:#94a3b8;margin-top:12px;">Secured control API • Supabase backend • Asia/Kolkata</div>
       </div>
     </div>`;
-}
-
-async function bootstrap() {
-  if (!S.key) {
-    renderAccessRequired();
-    return;
-  }
-  try {
-    await load(S.selectedDate);
-    syncUrl(S.selectedDate);
-    renderShell();
-    render();
-  } catch (e) {
-    S.key = "";
-    try { sessionStorage.removeItem("ba_control_access"); } catch {}
-    renderAccessRequired("This secure Control Centre link is invalid or has expired. Please use the latest EOD email link.");
-    console.error("BA control-center access:", e);
-  }
+  $("loginBtn").onclick = async () => {
+    const btn = $("loginBtn");
+    const key = $("pw").value.trim();
+    if (!key) {
+      toast("Enter the control-center password.");
+      $("pw").focus();
+      return;
+    }
+    S.key = key;
+    btn.disabled = true;
+    btn.textContent = "Connecting to live engine…";
+    try {
+      await load();
+      renderShell();
+      render();
+      toast("Connected to live Supabase engine");
+    } catch (e) {
+      S.key = "";
+      $("pw").value = "";
+      btn.disabled = false;
+      btn.textContent = "Unlock Engine & Access Dashboard";
+      toast(e.message || "Access denied or backend unavailable");
+      console.error("BA control-center login:", e);
+    }
+  };
+  $("pw").onkeydown = e => { if (e.key === "Enter") $("loginBtn").click(); };
 }
 
 async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboard refreshed") {
@@ -608,10 +614,18 @@ async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboa
   if (btn) { btn.disabled = true; btn.textContent = "↻ Refreshing…"; }
   try {
     await load(date);
-    syncUrl(S.selectedDate);
     render();
     toast(successMessage);
   } catch (err) {
+    const main = $("main");
+    if (main) {
+      main.innerHTML = `
+        <div class="data-state-banner error">
+          <div class="state-copy"><b>Couldn't load live Control API data.</b><br>${esc(err.message || "Unknown API error")}</div>
+          <button id="dataRetry">Retry</button>
+        </div>`;
+      $("dataRetry").onclick = () => refreshDashboard(S.selectedDate, "Dashboard refreshed");
+    }
     toast(err.message || "Could not refresh dashboard");
   } finally {
     const b = $("refreshAll");
@@ -626,14 +640,14 @@ function renderShell() {
         <div class="brand-logo">BA</div>
         <div>
           <div class="brand-title">BA Job Intelligence</div>
-          <div class="brand-subtitle">Control Center • Live backend • Asia/Kolkata</div>
+          <div class="brand-subtitle">Control Centre • Live backend • Asia/Kolkata</div>
         </div>
       </div>
       <div class="header-actions">
         <div class="meta-chip" style="gap:8px;">
           <span style="font-size:14px;">📅</span>
           <label for="dayPicker" style="font-size:10px;color:#64748b;font-weight:700;">RUN DAY</label>
-          <input id="dayPicker" type="date" value="${esc(S.selectedDate)}" style="border:0;background:transparent;color:#0f172a;font-size:12px;font-weight:700;outline:none;">
+          <input id="dayPicker" type="date" max="${new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date())}" value="${esc(S.selectedDate)}" style="border:0;background:transparent;color:#0f172a;font-size:12px;font-weight:700;outline:none;">
         </div>
         <button id="refreshAll" class="form-input" style="padding:8px 12px; font-size:11px; font-weight:800; white-space:nowrap;">↻ Refresh</button>
         <div class="status-pill">
@@ -641,6 +655,7 @@ function renderShell() {
           <div>Engine Active <span style="font-size: 10px; opacity: 0.8; font-weight: 500;">(Live)</span></div>
         </div>
         <div class="avatar-badge">AK</div>
+        <button id="logout" style="font-size: 12px; font-weight: 700; color: #64748b; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: 4px;">Lock</button>
       </div>
     </header>
     <div class="app-layout">
@@ -667,25 +682,20 @@ function renderShell() {
       render();
     };
   });
+  $("logout").onclick = () => { S.key = ""; S.token = ""; sessionStorage.removeItem("ba_control_token"); login(); };
   $("dayPicker").onchange = async (e) => {
     const d = e.target.value;
-    if (!d) return;
+    const today = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date());
+    if (!d || d > today) {
+      e.target.value = S.selectedDate;
+      toast("Future run days are not available.");
+      return;
+    }
     await refreshDashboard(d, "Loaded " + fmtDate(d) + " telemetry");
   };
   $("refreshAll").onclick = async () => {
     await refreshDashboard(S.selectedDate, "Dashboard refreshed");
   };
-}
-
-function configuredWindows() {
-  const cfg = S.data?.config?.engine;
-  const fromConfig = Array.isArray(cfg?.daily_windows)
-    ? cfg.daily_windows.map(w => String(w).slice(0, 5)).filter(w => /^\d{2}:\d{2}$/.test(w))
-    : [];
-  if (fromConfig.length) return [...new Set(fromConfig)].sort();
-  const fromRuns = arr(S.data?.runs).map(r => String(r.window_time || "").slice(0, 5)).filter(w => /^\d{2}:\d{2}$/.test(w));
-  if (fromRuns.length) return [...new Set(fromRuns)].sort();
-  return ["08:00", "12:00", "18:00", "21:30"];
 }
 
 function uniqueJobs() {
@@ -850,12 +860,11 @@ function overview() {
             <h3>Your Daily Job-Hunt Journey</h3>
           </div>
           <div class="stepper">
-            ${configuredWindows().map((w, i) => {
-              const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
-              const now = S.selectedDate === TODAY_IST ? istTime() : "23:59";
+            ${["08:00", "12:00", "18:00", "21:30"].map((w, i) => {
+              const r = arr(S.analytics?.selectedRuns || S.data?.runs).find(x => String(x.window_time).slice(0, 5) === w);
               const completed = !!r && String(r.status || "").toLowerCase() === "completed";
               const failed = !!r && !completed;
-              const upcoming = !r && w > now;
+              const upcoming = !r;
               const stateClass = completed ? "done" : (!r && upcoming ? (i === 2 ? "active" : "") : "active");
               const icon = completed ? "✓" : (failed ? "!" : "⏱");
               const stateText = completed
@@ -949,8 +958,6 @@ function apps(id) {
 
 function jobs() {
   let data = uniqueJobs();
-  const regions = [...new Set(data.map(j => String(j.region || "").trim()).filter(Boolean))].sort();
-  const matchClasses = [...new Set(data.map(j => String(j.match_class || "").trim()).filter(Boolean))].sort();
   $("main").innerHTML = `
     <div style="margin-bottom: 20px;">
       <h1 style="font-size: 24px; font-weight: 800;">Verified Opportunities</h1>
@@ -959,10 +966,10 @@ function jobs() {
     <div class="tools-bar">
       <input id="q" class="form-input" style="flex:1; min-width:240px;" placeholder="Search title, employer, or location...">
       <select id="rg" class="form-input">
-        <option value="">All Regions</option>${regions.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}
+        <option value="">All Regions</option><option>india</option><option>europe</option><option>gulf</option><option>other</option>
       </select>
       <select id="mc" class="form-input">
-        <option value="">All Matches</option>${matchClasses.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join("")}
+        <option value="">All Matches</option><option>strong</option><option>moderate</option>
       </select>
     </div>
     <div id="grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;"></div>`;
@@ -991,204 +998,3 @@ function jobs() {
           </div>
           <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:12px;">
             <select class="form-input status" data-id="${j.vacancy_id}" style="padding:6px 10px; font-size:11px;">
-              <option value="">${a ? 'Current: ' + esc(a.status) : 'Track application'}</option>
-              <option value="saved">Saved</option><option value="applied">Applied</option>
-              <option value="screening">Screening</option><option value="interview">Interview</option>
-              <option value="offer">Offer</option><option value="rejected">Rejected</option>
-            </select>
-            <a href="${esc(j.direct_apply_url)}" target="_blank" rel="noopener noreferrer" style="background:#090d16; color:#fff; font-size:11px; font-weight:700; padding:8px 14px; border-radius:8px; text-decoration:none;">Direct Application →</a>
-          </div>
-        </article>`;
-    }).join("") : `<div class="card-box" style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;">No matching opportunities found.</div>`;
-
-    document.querySelectorAll(".status").forEach(s => {
-      const a = apps(s.dataset.id);
-      if (a) s.value = a.status;
-      s.onchange = () => saveStatus(s.dataset.id, s.value);
-    });
-  };
-
-  ["q", "rg", "mc"].forEach(id => $(id).oninput = paint);
-  paint();
-}
-
-async function saveStatus(id, status) {
-  if (!status) return;
-  const a = apps(id);
-  try {
-    await api("", { method: "POST", body: JSON.stringify({ action: "application", vacancy_id: id, status, notes: a?.notes || null }) });
-    await load();
-    render();
-    toast("Application status updated");
-  } catch (e) { toast(e.message); }
-}
-
-function runs() {
-  $("main").innerHTML = `
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-      <div>
-        <h1 style="font-size:24px; font-weight:800;">Run History</h1>
-        <p style="font-size:13px; color:var(--text-muted);">Automation telemetry for <b>${fmtDate(S.selectedDate)}</b> rendered in India Standard Time (IST).</p>
-      </div>
-      <button id="refreshRuns" class="login-submit-btn" style="width:auto; padding:8px 16px;">↻ Refresh Runs</button>
-    </div>
-    <div class="card-box table-responsive">
-      <table class="data-table">
-        <tr><th>Window</th><th>Status</th><th>Sources</th><th>Fetched</th><th>New</th><th>Eligible</th><th>Strong</th><th>Moderate</th><th>Errors</th><th>Finished (IST)</th></tr>
-        ${configuredWindows().map(w => {
-          const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
-          const isPending = w > istTime();
-          return `
-            <tr>
-              <td><b>${w} IST</b></td>
-              <td><span class="badge-direct" style="${isPending && !r ? 'background:#f1f5f9; color:#64748b;' : ''}">${r ? esc(r.status) : isPending ? 'Scheduled' : 'Not recorded'}</span></td>
-              <td>${r ? (r.successful_sources + '/' + r.source_count) : '—'}</td>
-              <td><b>${r?.fetched_jobs ?? '—'}</b></td>
-              <td>${r?.new_jobs ?? '—'}</td>
-              <td>${r?.eligible_jobs ?? '—'}</td>
-              <td>${r?.strong_matches ?? '—'}</td>
-              <td>${r?.moderate_matches ?? '—'}</td>
-              <td>${r?.error_count ?? '—'}</td>
-              <td>${fmt(r?.finished_at)}</td>
-            </tr>`;
-        }).join("")}
-      </table>
-    </div>`;
-  $("refreshRuns").onclick = async () => { await load(); render(); toast("Runs refreshed"); };
-}
-
-function sources() {
-  $("main").innerHTML = `
-    <div style="margin-bottom:20px;">
-      <h1 style="font-size:24px; font-weight:800;">Source Network</h1>
-      <p style="font-size:13px; color:var(--text-muted);">Configured employer feeds and ATS pipelines feeding the search engine.</p>
-    </div>
-    <div class="card-box table-responsive">
-      <table class="data-table">
-        <tr><th>Employer</th><th>Provider</th><th>Region</th><th>Type</th><th>Priority</th><th>Status</th><th>Last Success</th><th>Actions</th></tr>
-        ${S.sources.map(s => `
-          <tr>
-            <td><b>${esc(s.employer_name)}</b><div style="font-size:9.5px; color:#94a3b8;">${esc(s.source_key)}</div></td>
-            <td>${esc(s.provider)}</td>
-            <td>${esc(s.region)}</td>
-            <td>${s.discovery_only ? '<span class="badge-match moderate">Discovery</span>' : '<span class="badge-direct">Direct</span>'}</td>
-            <td>${s.priority}</td>
-            <td>${s.enabled ? '<span style="color:#059669; font-weight:700;">● Enabled</span>' : '<span style="color:#94a3b8;">Disabled</span>'}</td>
-            <td>${fmt(s.last_success_at)}</td>
-            <td><button class="form-input" data-src="${s.id}" style="padding:4px 8px; font-size:10px;">${s.enabled ? 'Disable' : 'Enable'}</button></td>
-          </tr>`).join("")}
-      </table>
-    </div>`;
-
-  document.querySelectorAll("[data-src]").forEach(b => b.onclick = async () => {
-    const s = S.sources.find(x => x.id === b.dataset.src);
-    try {
-      await api("", { method: "POST", body: JSON.stringify({ action: "source_toggle", id: s.id, enabled: !s.enabled }) });
-      await load();
-      sources();
-      toast("Source status updated");
-    } catch (e) { toast(e.message); }
-  });
-}
-
-function analytics() {
-  const trend = arr(S.analytics?.trend).slice(-7);
-  const srcs = arr(S.analytics?.topSources);
-  $("main").innerHTML = `
-    <div style="margin-bottom:20px;">
-      <h1 style="font-size:24px; font-weight:800;">Telemetry & Analytics</h1>
-      <p style="font-size:13px; color:var(--text-muted);">Deep telemetry across ingestion volume, verified opportunities and source contribution • ending ${fmtDate(S.selectedDate)}.</p>
-    </div>
-    <div class="visual-grid">
-      <section class="card-box">
-        <div class="box-header">
-          <h3>7-Day Intake Pulse</h3>
-          <div class="box-legend">
-            <span><i style="background:#3b82f6;"></i>Sourced</span>
-            <span><i style="background:#10b981;"></i>Verified</span>
-            <span><i style="background:#8b5cf6;"></i>Strong</span>
-          </div>
-        </div>
-        <div class="chart-body">
-          ${trend.length ? trend.map((x,i) => {
-            const mx = Math.max(1,...trend.map(y=>Number(y.sourced||0)));
-            return `<div class="chart-col">
-              ${i===trend.length-1?'<div class="col-highlight"></div>':''}
-              <div class="col-bar s" style="height:${Math.max(12,Math.round(Number(x.sourced||0)/mx*160))}px"><span class="col-bar-val">${Number(x.sourced||0).toLocaleString()}</span></div>
-              <div class="col-bar v" style="height:${Math.max(8,Math.round(Number(x.verified||0)/mx*160))}px"><span class="col-bar-val">${Number(x.verified||0)}</span></div>
-              <div class="col-bar m" style="height:${Math.max(6,Math.round(Number(x.verifiedStrong||0)/mx*160))}px"><span class="col-bar-val">${Number(x.verifiedStrong||0)}</span></div>
-              <span class="col-date">${fmtDate(x.date)}</span>
-            </div>`;
-          }).join("") : '<div style="padding:30px;color:#94a3b8;">No telemetry yet.</div>'}
-        </div>
-      </section>
-      <section class="card-box">
-        <div class="box-header"><h3>Source Network Performance</h3></div>
-        <div class="source-bars">
-          ${srcs.length ? srcs.map(s => {
-            const maxS = Math.max(1, ...srcs.map(x => Number(x.value || 0)));
-            return `<div class="source-item">
-              <div class="source-logo">${esc(String(s.name).slice(0,2))}</div>
-              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</div>
-              <div class="source-track"><div class="source-fill" style="width:${Math.round(Number(s.value||0)/maxS*100)}%;"></div></div>
-              <div class="source-count">${Number(s.value||0)}</div>
-            </div>`;
-          }).join("") : '<div style="padding:20px;color:#94a3b8;">No source analytics yet.</div>'}
-        </div>
-      </section>
-    </div>`;
-}
-
-const csv = x => String(x || "").split(",").map(s => s.trim()).filter(Boolean);
-async function saveCfg(k, v) {
-  try {
-    await api("", { method: "POST", body: JSON.stringify({ action: "config", config_key: k, config_value: v }) });
-    await load();
-    render();
-    toast("Configuration saved: " + k);
-  } catch (e) { toast(e.message); }
-}
-
-function settings() {
-  const s = S.data.config.search || {}, n = S.data.config.notification || {}, r = S.data.config.retention || {};
-  $("main").innerHTML = `
-    <div style="margin-bottom:20px;">
-      <h1 style="font-size:24px; font-weight:800;">Configuration</h1>
-      <p style="font-size:13px; color:var(--text-muted);">Runtime engine parameters and criteria.</p>
-    </div>
-    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px;">
-      <section class="card-box">
-        <h3 style="margin-bottom:12px;">Search Filters</h3>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div><label style="font-size:11px; font-weight:700;">Regions</label><input id="regions" class="form-input" style="width:100%;" value="${esc(arr(s.include_regions).join(', '))}"></div>
-          <div><label style="font-size:11px; font-weight:700;">Countries</label><input id="countries" class="form-input" style="width:100%;" value="${esc(arr(s.include_countries).join(', '))}"></div>
-          <button id="saveS" class="login-submit-btn" style="margin-top:8px;">Save Search Criteria</button>
-        </div>
-      </section>
-      <section class="card-box">
-        <h3 style="margin-bottom:12px;">Scoring Thresholds</h3>
-        <div style="display:flex; flex-direction:column; gap:10px;">
-          <div><label style="font-size:11px; font-weight:700;">Minimum Pass Score (0–100)</label><input id="min" type="number" class="form-input" style="width:100%;" value="${Number(s.minimum_match_score ?? 58)}"></div>
-          <div><label style="font-size:11px; font-weight:700;">Strong Score Barrier</label><input id="strong" type="number" class="form-input" style="width:100%;" value="${Number(s.strong_match_score ?? 72)}"></div>
-          <button id="saveM" class="login-submit-btn" style="margin-top:8px;">Save Matching Weights</button>
-        </div>
-      </section>
-    </div>`;
-
-  $("saveS").onclick = () => saveCfg("search", { ...s, include_regions: csv($("regions").value), include_countries: csv($("countries").value).map(x => x.toUpperCase()) });
-  $("saveM").onclick = () => saveCfg("search", { ...s, minimum_match_score: Number($("min").value), strong_match_score: Number($("strong").value) });
-}
-
-function render() {
-  if (S.page === "overview") overview();
-  else if (S.page === "jobs") jobs();
-  else if (S.page === "runs") runs();
-  else if (S.page === "sources") sources();
-  else if (S.page === "analytics") analytics();
-  else settings();
-}
-
-bootstrap();
-</script>
-</body>
-</html>
