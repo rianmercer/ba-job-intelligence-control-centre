@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>BA Job Intelligence Control Centre</title>
+<meta name="referrer" content="no-referrer">
+<title>BA Job Intelligence Control Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -454,12 +455,6 @@ main { padding: 22px 28px 48px; max-width: 1540px; margin: 0 auto; width: 100%; 
 .data-table { width: 100%; border-collapse: collapse; min-width: 780px; }
 .data-table th, .data-table td { padding: 12px; text-align: left; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
 .data-table th { font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 10px; background: #f8fafc; }
-
-.data-state-banner{margin:0 0 16px;padding:12px 14px;border:1px solid #dbe4ef;border-radius:12px;background:#f8fafc;color:#475569;font-size:12px;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.data-state-banner.error{border-color:#fecaca;background:#fff7f7;color:#991b1b}
-.data-state-banner .state-copy{line-height:1.45}
-.data-state-banner button{border:1px solid #cbd5e1;background:#fff;border-radius:8px;padding:7px 10px;font-weight:800;font-size:11px;cursor:pointer}
-
 .toast-notice {
   position: fixed; bottom: 20px; right: 20px;
   background: #0f172a; color: #ffffff; padding: 12px 18px;
@@ -499,7 +494,15 @@ main { padding: 22px 28px 48px; max-width: 1540px; margin: 0 auto; width: 100%; 
 
 <script>
 const API = "https://eybjpjhzwskfgskvnfbj.supabase.co/functions/v1/ba-control-api-v3";
-const S = { key: "", token: "", page: "overview", loadSeq: 0, selectedDate: new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date()), data: null, analytics: null, sources: [], jobs: [] };
+const URL_PARAMS = new URLSearchParams(location.search);
+const TODAY_IST = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date());
+const DATE_PARAM = URL_PARAMS.get("date") || "";
+const URL_ACCESS = URL_PARAMS.get("access") || "";
+const STORED_ACCESS = (() => { try { return sessionStorage.getItem("ba_control_access") || ""; } catch { return ""; } })();
+const ACCESS_TOKEN = URL_ACCESS || STORED_ACCESS;
+if (URL_ACCESS) { try { sessionStorage.setItem("ba_control_access", URL_ACCESS); } catch {} }
+const INITIAL_DATE = /^\\d{4}-\\d{2}-\\d{2}$/.test(DATE_PARAM) ? DATE_PARAM : TODAY_IST;
+const S = { key: ACCESS_TOKEN, page: "overview", selectedDate: INITIAL_DATE, data: null, analytics: null, sources: [], jobs: [] };
 const $ = id => document.getElementById(id);
 const arr = x => Array.isArray(x) ? x : [];
 const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -517,21 +520,19 @@ function toast(m) {
 
 async function api(resource, options = {}) {
   const method = (options.method || "GET").toUpperCase();
-  const qp = new URLSearchParams();
-  if (S.selectedDate) qp.set("date", S.selectedDate);
-  if (resource) qp.set("resource", resource);
-  if (S.key) qp.set("key", S.key); // manual-password fallback only
+  const query = "?key=" + encodeURIComponent(S.key) + "&date=" + encodeURIComponent(S.selectedDate) + (resource ? "&resource=" + encodeURIComponent(resource) : "");
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 15000);
-  const headers = { ...(options.headers || {}) };
-  if (S.token) headers["Authorization"] = "Bearer " + S.token;
-  if (method === "POST") headers["Content-Type"] = "application/json";
-  const o = { ...options, method, headers, cache: "no-store", signal: controller.signal };
+  const o = { ...options, signal: controller.signal };
+  if (method === "POST") {
+    o.headers = { "Content-Type": "text/plain;charset=UTF-8", ...(options.headers || {}) };
+  }
   try {
-    const res = await fetch(API + "?" + qp.toString(), o);
+    o.cache = "no-store";
+    const res = await fetch(API + query, o);
     const text = await res.text();
     let body = {};
-    try { body = JSON.parse(text); } catch (_) { body = { error: text }; }
+    try { body = JSON.parse(text); } catch (e) { body = { error: text }; }
     if (!res.ok) throw new Error(body.error || ("HTTP " + res.status));
     return body;
   } catch (e) {
@@ -544,69 +545,63 @@ async function api(resource, options = {}) {
 }
 
 async function load(date = S.selectedDate) {
-  const targetDate = date || S.selectedDate;
-  const seq = ++S.loadSeq;
-  S.selectedDate = targetDate;
+  S.selectedDate = date || S.selectedDate;
+  // Clear selected-day datasets before replacing them so an older day can never render stale tiles.
   S.data = null; S.analytics = null; S.jobs = [];
   const [overviewData, analyticsData] = await Promise.all([
     api("overview"),
     api("analytics")
   ]);
-  if (seq !== S.loadSeq) return false;
   S.data = overviewData || {};
   S.analytics = analyticsData || {};
   S.jobs = S.analytics.verifiedJobs || [];
   try {
     S.sources = (await api("sources")).sources || [];
   } catch (e) {
-    if (seq !== S.loadSeq) return false;
     S.sources = [];
     console.warn("Source registry unavailable:", e.message);
   }
-  return true;
 }
 
-function login() {
+function syncUrl(date = S.selectedDate) {
+  try {
+    const u = new URL(location.href);
+    u.searchParams.delete("access");
+    if (date) u.searchParams.set("date", date);
+    history.replaceState(null, "", u.pathname + "?" + u.searchParams.toString());
+  } catch {}
+}
+
+function renderAccessRequired(message = "Open the Control Centre from the secure link in your EOD email.") {
   $("app").innerHTML = `
     <div class="login-screen">
       <div class="login-card">
         <div class="login-brand-icon">BA</div>
         <h1>BA Job Intelligence</h1>
-        <p>Live control & telemetry center for the Business Analyst search engine.</p>
-        <div class="login-input-group">
-          <label>Control-Center Password</label>
-          <input id="pw" type="password" class="login-input" autocomplete="current-password" placeholder="Enter engine master password">
+        <p>${esc(message)}</p>
+        <div style="font-size:11px;color:#64748b;line-height:1.6;margin-top:14px;">
+          This dashboard uses a secure, time-limited email link. No dashboard password is required.
         </div>
-        <button id="loginBtn" class="login-submit-btn">Unlock Engine & Access Dashboard</button>
-         <div style="font-size:10px;color:#94a3b8;margin-top:12px;">Secured control API • Supabase backend • Asia/Kolkata</div>
       </div>
     </div>`;
-  $("loginBtn").onclick = async () => {
-    const btn = $("loginBtn");
-    const key = $("pw").value.trim();
-    if (!key) {
-      toast("Enter the control-center password.");
-      $("pw").focus();
-      return;
-    }
-    S.key = key;
-    btn.disabled = true;
-    btn.textContent = "Connecting to live engine…";
-    try {
-      await load();
-      renderShell();
-      render();
-      toast("Connected to live Supabase engine");
-    } catch (e) {
-      S.key = "";
-      $("pw").value = "";
-      btn.disabled = false;
-      btn.textContent = "Unlock Engine & Access Dashboard";
-      toast(e.message || "Access denied or backend unavailable");
-      console.error("BA control-center login:", e);
-    }
-  };
-  $("pw").onkeydown = e => { if (e.key === "Enter") $("loginBtn").click(); };
+}
+
+async function bootstrap() {
+  if (!S.key) {
+    renderAccessRequired();
+    return;
+  }
+  try {
+    await load(S.selectedDate);
+    syncUrl(S.selectedDate);
+    renderShell();
+    render();
+  } catch (e) {
+    S.key = "";
+    try { sessionStorage.removeItem("ba_control_access"); } catch {}
+    renderAccessRequired("This secure Control Centre link is invalid or has expired. Please use the latest EOD email link.");
+    console.error("BA control-center access:", e);
+  }
 }
 
 async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboard refreshed") {
@@ -614,18 +609,10 @@ async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboa
   if (btn) { btn.disabled = true; btn.textContent = "↻ Refreshing…"; }
   try {
     await load(date);
+    syncUrl(S.selectedDate);
     render();
     toast(successMessage);
   } catch (err) {
-    const main = $("main");
-    if (main) {
-      main.innerHTML = `
-        <div class="data-state-banner error">
-          <div class="state-copy"><b>Couldn't load live Control API data.</b><br>${esc(err.message || "Unknown API error")}</div>
-          <button id="dataRetry">Retry</button>
-        </div>`;
-      $("dataRetry").onclick = () => refreshDashboard(S.selectedDate, "Dashboard refreshed");
-    }
     toast(err.message || "Could not refresh dashboard");
   } finally {
     const b = $("refreshAll");
@@ -640,14 +627,14 @@ function renderShell() {
         <div class="brand-logo">BA</div>
         <div>
           <div class="brand-title">BA Job Intelligence</div>
-          <div class="brand-subtitle">Control Centre • Live backend • Asia/Kolkata</div>
+          <div class="brand-subtitle">Control Center • Live backend • Asia/Kolkata</div>
         </div>
       </div>
       <div class="header-actions">
         <div class="meta-chip" style="gap:8px;">
           <span style="font-size:14px;">📅</span>
           <label for="dayPicker" style="font-size:10px;color:#64748b;font-weight:700;">RUN DAY</label>
-          <input id="dayPicker" type="date" max="${new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date())}" value="${esc(S.selectedDate)}" style="border:0;background:transparent;color:#0f172a;font-size:12px;font-weight:700;outline:none;">
+          <input id="dayPicker" type="date" value="${esc(S.selectedDate)}" style="border:0;background:transparent;color:#0f172a;font-size:12px;font-weight:700;outline:none;">
         </div>
         <button id="refreshAll" class="form-input" style="padding:8px 12px; font-size:11px; font-weight:800; white-space:nowrap;">↻ Refresh</button>
         <div class="status-pill">
@@ -655,7 +642,6 @@ function renderShell() {
           <div>Engine Active <span style="font-size: 10px; opacity: 0.8; font-weight: 500;">(Live)</span></div>
         </div>
         <div class="avatar-badge">AK</div>
-        <button id="logout" style="font-size: 12px; font-weight: 700; color: #64748b; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: 4px;">Lock</button>
       </div>
     </header>
     <div class="app-layout">
@@ -682,15 +668,9 @@ function renderShell() {
       render();
     };
   });
-  $("logout").onclick = () => { S.key = ""; S.token = ""; sessionStorage.removeItem("ba_control_token"); login(); };
   $("dayPicker").onchange = async (e) => {
     const d = e.target.value;
-    const today = new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date());
-    if (!d || d > today) {
-      e.target.value = S.selectedDate;
-      toast("Future run days are not available.");
-      return;
-    }
+    if (!d) return;
     await refreshDashboard(d, "Loaded " + fmtDate(d) + " telemetry");
   };
   $("refreshAll").onclick = async () => {
@@ -860,11 +840,12 @@ function overview() {
             <h3>Your Daily Job-Hunt Journey</h3>
           </div>
           <div class="stepper">
-            ${["08:00", "12:00", "18:00", "21:30"].map((w, i) => {
+            ${["08:00", "12:00", "18:00", "22:00"].map((w, i) => {
               const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
+              const now = istTime();
               const completed = !!r && String(r.status || "").toLowerCase() === "completed";
               const failed = !!r && !completed;
-              const upcoming = !r;
+              const upcoming = !r && w > now;
               const stateClass = completed ? "done" : (!r && upcoming ? (i === 2 ? "active" : "") : "active");
               const icon = completed ? "✓" : (failed ? "!" : "⏱");
               const stateText = completed
@@ -1042,9 +1023,9 @@ function runs() {
     <div class="card-box table-responsive">
       <table class="data-table">
         <tr><th>Window</th><th>Status</th><th>Sources</th><th>Fetched</th><th>New</th><th>Eligible</th><th>Strong</th><th>Moderate</th><th>Errors</th><th>Finished (IST)</th></tr>
-        ${["08:00", "12:00", "18:00", "21:30"].map(w => {
+        ${["08:00", "12:00", "18:00", "22:00"].map(w => {
           const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
-          const isPending = !r;
+          const isPending = w > istTime();
           return `
             <tr>
               <td><b>${w} IST</b></td>
@@ -1195,37 +1176,7 @@ function render() {
   else settings();
 }
 
-
-async function initDashboard() {
-  const params = new URLSearchParams(window.location.search);
-  const urlAccess = params.get("access");
-  const urlDate = params.get("date");
-  const sessionToken = sessionStorage.getItem("ba_control_token");
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
-  if (urlDate && urlDate <= today) S.selectedDate = urlDate;
-  if (urlAccess || sessionToken) {
-    S.token = urlAccess || sessionToken;
-    sessionStorage.setItem("ba_control_token", S.token);
-    const cleanUrl = new URL(window.location.href);
-    cleanUrl.searchParams.delete("access");
-    window.history.replaceState({}, document.title, cleanUrl.toString());
-    try {
-      await load(S.selectedDate);
-      renderShell();
-      render();
-      toast("Connected to live Supabase telemetry");
-      return;
-    } catch (err) {
-      console.warn("Magic-link authentication failed; using password fallback.", err.message);
-      sessionStorage.removeItem("ba_control_token");
-      S.token = "";
-      S.data = null; S.analytics = null; S.sources = []; S.jobs = [];
-    }
-  }
-  login();
-}
-
-initDashboard();
+bootstrap();
 </script>
 </body>
 </html>
