@@ -2,8 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="referrer" content="no-referrer">
+<meta name="viewport" content="width=device-width,initial-scale=1">\n<meta name="referrer" content="no-referrer">
 <title>BA Job Intelligence Control Center</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -678,6 +677,16 @@ function renderShell() {
   };
 }
 
+function configuredWindows() {
+  const cfg = S.data?.config?.engine;
+  const fromConfig = Array.isArray(cfg?.daily_windows)
+    ? cfg.daily_windows.map(w => String(w).slice(0, 5)).filter(w => /^\\d{2}:\\d{2}$/.test(w))
+    : [];
+  if (fromConfig.length) return [...new Set(fromConfig)];
+  const fromRuns = arr(S.data?.runs).map(r => String(r.window_time || "").slice(0, 5)).filter(w => /^\\d{2}:\\d{2}$/.test(w));
+  return [...new Set(fromRuns)].sort();
+}
+
 function uniqueJobs() {
   const m = new Map();
   for (const j of arr(S.jobs)) {
@@ -840,7 +849,7 @@ function overview() {
             <h3>Your Daily Job-Hunt Journey</h3>
           </div>
           <div class="stepper">
-            ${["08:00", "12:00", "18:00", "22:00"].map((w, i) => {
+            ${configuredWindows().map((w, i) => {
               const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
               const now = istTime();
               const completed = !!r && String(r.status || "").toLowerCase() === "completed";
@@ -939,6 +948,8 @@ function apps(id) {
 
 function jobs() {
   let data = uniqueJobs();
+  const regions = [...new Set(data.map(j => String(j.region || "").trim()).filter(Boolean))].sort();
+  const matchClasses = [...new Set(data.map(j => String(j.match_class || "").trim()).filter(Boolean))].sort();
   $("main").innerHTML = `
     <div style="margin-bottom: 20px;">
       <h1 style="font-size: 24px; font-weight: 800;">Verified Opportunities</h1>
@@ -947,10 +958,10 @@ function jobs() {
     <div class="tools-bar">
       <input id="q" class="form-input" style="flex:1; min-width:240px;" placeholder="Search title, employer, or location...">
       <select id="rg" class="form-input">
-        <option value="">All Regions</option><option>india</option><option>europe</option><option>gulf</option><option>other</option>
+        <option value="">All Regions</option>${regions.map(r => `<option value="${esc(r)}">${esc(r)}</option>`).join("")}
       </select>
       <select id="mc" class="form-input">
-        <option value="">All Matches</option><option>strong</option><option>moderate</option>
+        <option value="">All Matches</option>${matchClasses.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join("")}
       </select>
     </div>
     <div id="grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;"></div>`;
@@ -1023,7 +1034,7 @@ function runs() {
     <div class="card-box table-responsive">
       <table class="data-table">
         <tr><th>Window</th><th>Status</th><th>Sources</th><th>Fetched</th><th>New</th><th>Eligible</th><th>Strong</th><th>Moderate</th><th>Errors</th><th>Finished (IST)</th></tr>
-        ${["08:00", "12:00", "18:00", "22:00"].map(w => {
+        ${configuredWindows().map(w => {
           const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
           const isPending = w > istTime();
           return `
