@@ -682,9 +682,10 @@ function configuredWindows() {
   const fromConfig = Array.isArray(cfg?.daily_windows)
     ? cfg.daily_windows.map(w => String(w).slice(0, 5)).filter(w => /^\d{2}:\d{2}$/.test(w))
     : [];
-  if (fromConfig.length) return [...new Set(fromConfig)];
+  if (fromConfig.length) return [...new Set(fromConfig)].sort();
   const fromRuns = arr(S.data?.runs).map(r => String(r.window_time || "").slice(0, 5)).filter(w => /^\d{2}:\d{2}$/.test(w));
-  return [...new Set(fromRuns)].sort();
+  if (fromRuns.length) return [...new Set(fromRuns)].sort();
+  return ["08:00", "12:00", "18:00", "21:30"];
 }
 
 function uniqueJobs() {
@@ -851,7 +852,7 @@ function overview() {
           <div class="stepper">
             ${configuredWindows().map((w, i) => {
               const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
-              const now = istTime();
+              const now = S.selectedDate === TODAY_IST ? istTime() : "23:59";
               const completed = !!r && String(r.status || "").toLowerCase() === "completed";
               const failed = !!r && !completed;
               const upcoming = !r && w > now;
