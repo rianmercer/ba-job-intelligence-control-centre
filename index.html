@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BA Job Intelligence Control Centre</title>
+<meta name="description" content="Business Analyst job intelligence control centre">
+<style>
+:root{--bg:#f5f7fb;--card:#fff;--ink:#162033;--muted:#6b7688;--line:#e5e9f0;--accent:#4f46e5;--accent2:#7c3aed;--ok:#16855b;--warn:#b7791f;--bad:#c43d4b;--shadow:0 10px 30px rgba(25,35,60,.07);--r:18px}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}.app{display:flex;min-height:100vh}.side{width:250px;background:#fff;border-right:1px solid var(--line);padding:24px 16px;position:sticky;top:0;height:100vh}.brand{font-weight:800;font-size:16px;display:flex;gap:10px;align-items:center;padding:8px 10px 24px}.brandmark{width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;display:grid;place-items:center;font-weight:900}.nav{display:grid;gap:6px}.nav button{border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:11px;color:#687386;cursor:pointer}.nav button.active,.nav button:hover{background:#f0efff;color:var(--accent);font-weight:700}.sidefoot{position:absolute;bottom:20px;left:20px;right:20px;color:#9aa3b1;font-size:12px}.main{flex:1;min-width:0;padding:28px 34px 50px}.top{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:24px}.eyebrow{font-size:11px;letter-spacing:.12em;font-weight:800;color:var(--accent);text-transform:uppercase}.title{font-size:28px;font-weight:850;margin:4px 0}.sub{color:var(--muted)}.actions{display:flex;gap:10px;align-items:center}.datebox{background:#fff;border:1px solid var(--line);padding:8px 11px;border-radius:12px}.datebox label{display:block;font-size:9px;font-weight:800;color:#8b95a5;letter-spacing:.12em}.datebox input{border:0;outline:0;background:transparent;font-weight:750;color:var(--ink)}.btn{border:1px solid var(--line);background:#fff;border-radius:12px;padding:10px 13px;cursor:pointer}.btn.primary{background:var(--accent);color:#fff;border-color:var(--accent)}.status{font-size:12px;padding:8px 11px;border-radius:999px;background:#ecfdf5;color:var(--ok);font-weight:700}.status.err{background:#fff1f2;color:var(--bad)}
+.grid5{display:grid;grid-template-columns:repeat(5,1fr);gap:14px}.kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:17px;box-shadow:var(--shadow);min-height:112px}.kpi .label{color:#7b8595;font-size:12px;font-weight:700}.kpi .num{font-size:28px;font-weight:850;margin:7px 0}.delta{font-size:11px;color:var(--muted)}.delta.up{color:var(--ok)}.delta.down{color:var(--bad)}
+.section{margin-top:18px}.row{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}.card{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:20px;box-shadow:var(--shadow)}.card h3{margin:0 0 4px;font-size:15px}.card .hint{color:var(--muted);font-size:12px;margin-bottom:18px}.chart{height:210px;display:flex;align-items:end;gap:10px;padding:10px 4px 22px;border-bottom:1px solid var(--line)}.barcol{height:100%;flex:1;display:flex;align-items:end;justify-content:center;position:relative}.bar{width:65%;min-height:3px;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,#8178ff,#5148dc)}.barlabel{position:absolute;bottom:-21px;font-size:10px;color:#8993a3}.barval{position:absolute;top:-17px;font-size:10px;color:#687386;font-weight:700}
+.map{height:210px;border-radius:14px;background:linear-gradient(135deg,#f2f4ff,#f9fafc);position:relative;overflow:hidden;border:1px solid #edf0f6}.map:before{content:"";position:absolute;inset:18px;background-image:radial-gradient(circle,#cfd5e3 1px,transparent 1px);background-size:22px 22px;opacity:.55}.worldline{position:absolute;left:9%;right:9%;top:42%;height:55px;border-top:2px dashed #c9cfea;border-radius:50%}.dot{position:absolute;width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 5px rgba(79,70,229,.11)}.maplegend{position:absolute;bottom:12px;left:14px;background:#fff;padding:7px 10px;border-radius:10px;font-size:11px;color:#687386;box-shadow:0 4px 12px rgba(20,30,60,.08)}
+.donutwrap{display:flex;gap:20px;align-items:center}.donut{width:145px;height:145px;border-radius:50%;background:conic-gradient(#5b54e8 0 35%,#8b7cf6 35% 62%,#b7aefb 62% 80%,#d7d3fc 80% 100%);position:relative}.donut:after{content:"";position:absolute;inset:31px;background:#fff;border-radius:50%}.legend{display:grid;gap:10px;flex:1}.leg{display:flex;justify-content:space-between;gap:10px;font-size:12px}.leg span:first-child{color:#667184}.sw{display:inline-block;width:8px;height:8px;border-radius:50%;background:#5b54e8;margin-right:7px}
+.timeline{display:grid;gap:10px}.run{display:grid;grid-template-columns:76px 1fr auto;gap:14px;align-items:center;padding:11px 0;border-bottom:1px solid #eef0f4}.run:last-child{border-bottom:0}.time{font-weight:800}.pill{font-size:10px;font-weight:800;padding:5px 8px;border-radius:999px}.completed{background:#eaf8f2;color:var(--ok)}.running{background:#fff7e6;color:var(--warn)}.failed{background:#fff0f1;color:var(--bad)}.scheduled{background:#f0f2f6;color:#778191}
+.jobs{display:grid;gap:10px}.job{display:grid;grid-template-columns:1fr auto;gap:15px;border:1px solid #edf0f4;border-radius:14px;padding:13px}.jobtitle{font-weight:800}.meta{font-size:11px;color:#778191;margin-top:4px}.score{font-weight:850;color:var(--accent);font-size:16px}.job a{color:var(--accent);text-decoration:none;font-size:11px;font-weight:750}.sourcegrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.source{padding:13px;border:1px solid #edf0f4;border-radius:13px}.source b{display:block}.source small{color:var(--muted)}.empty{padding:35px;text-align:center;color:#8a94a3;background:#fafbfc;border:1px dashed #dfe4ec;border-radius:14px}.hidden{display:none!important}.page{display:none}.page.active{display:block}.toast{position:fixed;right:22px;bottom:22px;background:#162033;color:#fff;padding:12px 15px;border-radius:12px;box-shadow:var(--shadow);display:none;z-index:20}.login{position:fixed;inset:0;background:rgba(245,247,251,.97);display:grid;place-items:center;z-index:30}.loginbox{width:min(430px,92vw);background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px;box-shadow:0 25px 80px rgba(20,30,60,.15)}.loginbox h2{margin:0 0 7px}.loginbox p{color:var(--muted);font-size:13px}.loginbox input{width:100%;border:1px solid var(--line);padding:12px;border-radius:11px;outline:none;margin:10px 0}.note{font-size:11px;color:#8a94a3}.error{color:var(--bad);font-size:12px;margin-top:8px}
+@media(max-width:1100px){.grid5{grid-template-columns:repeat(3,1fr)}.row{grid-template-columns:1fr}.sourcegrid{grid-template-columns:repeat(2,1fr)}}@media(max-width:760px){.side{display:none}.main{padding:20px}.grid5{grid-template-columns:repeat(2,1fr)}.top{display:block}.actions{margin-top:14px;flex-wrap:wrap}.job{grid-template-columns:1fr}.sourcegrid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="login" id="login">
+ <div class="loginbox">
+  <div class="eyebrow">Secure access</div><h2>BA Job Intelligence</h2>
+  <p id="loginMsg">Checking your secure access link…</p>
+  <input id="keyInput" type="password" placeholder="Control password (fallback)">
+  <button class="btn primary" style="width:100%" onclick="manualLogin()">Open Control Centre</button>
+  <div class="note">The password is never stored in this page. Magic-link tokens are kept only in sessionStorage.</div>
+  <div class="error" id="loginErr"></div>
+ </div>
+</div>
+<div class="app">
+<aside class="side">
+ <div class="brand"><div class="brandmark">BA</div><div>Job Intelligence</div></div>
+ <div class="nav">
+  <button class="active" data-page="overview">◉ Overview</button>
+  <button data-page="runs">◷ Run History</button>
+  <button data-page="sources">◌ Sources</button>
+  <button data-page="analytics">◈ Analytics</button>
+ </div>
+ <div class="sidefoot">Supabase Engine • 4.8.12<br>Windows: 08:00 · 12:00 · 18:00 · 21:30 IST</div>
+</aside>
+<main class="main">
+ <div class="top">
+  <div><div class="eyebrow">Control Centre</div><div class="title">Hey Akshay! 👋</div><div class="sub">Global Business Analyst job intelligence, verified and deduplicated.</div></div>
+  <div class="actions">
+   <div class="datebox"><label>RUN DAY</label><input type="date" id="dateInput"></div>
+   <button class="btn" onclick="refreshAll()">↻ Refresh</button><span class="status" id="status">Connected</span>
+  </div>
+ </div>
+
+ <section id="overview" class="page active">
+  <div class="grid5">
+   <div class="kpi"><div class="label">Jobs Sourced</div><div class="num" id="kSourced">—</div><div class="delta" id="dSourced">Selected day</div></div>
+   <div class="kpi"><div class="label">Verified Matches</div><div class="num" id="kVerified">—</div><div class="delta" id="dVerified">Direct URL verified</div></div>
+   <div class="kpi"><div class="label">Top BA Matches</div><div class="num" id="kStrong">—</div><div class="delta">Strong match class</div></div>
+   <div class="kpi"><div class="label">Active Sources</div><div class="num" id="kSources">—</div><div class="delta" id="dSources">Direct + discovery</div></div>
+   <div class="kpi"><div class="label">Countries</div><div class="num" id="kCountries">—</div><div class="delta">From verified job locations</div></div>
+  </div>
+  <div class="section row">
+   <div class="card"><h3>Daily Run Trend</h3><div class="hint">Seven-day sourcing volume and verified matches, ending on the selected run day.</div><div class="chart" id="trend"></div></div>
+   <div class="card"><h3>Global Opportunities</h3><div class="hint">Verified direct opportunities represented from live selected-day telemetry.</div><div class="map" id="map"><div class="worldline"></div><div class="maplegend" id="mapLegend">Loading verified locations…</div></div></div>
+  </div>
+  <div class="section row">
+   <div class="card"><h3>Run Status</h3><div class="hint">Latest record for each scheduled window.</div><div class="timeline" id="runsMini"></div></div>
+   <div class="card"><h3>Job Type Breakdown</h3><div class="hint">Employment type among selected-day verified matches.</div><div class="donutwrap"><div class="donut" id="donut"></div><div class="legend" id="typeLegend"></div></div></div>
+  </div>
+  <div class="section row">
+   <div class="card"><h3>Top Job Sources</h3><div class="hint">Employers/sources represented in verified selected-day matches.</div><div class="sourcegrid" id="topSources"></div></div>
+   <div class="card"><h3>Recent Verified BA Opportunities</h3><div class="hint">Latest direct-URL-verified matches for the selected day.</div><div class="jobs" id="recent"></div></div>
+  </div>
+ </section>
+
+ <section id="runs" class="page"><div class="card"><h3>Run History</h3><div class="hint" id="runHint"></div><div class="timeline" id="runsFull"></div></div></section>
+ <section id="sources" class="page"><div class="card"><h3>Source Registry</h3><div class="hint">Live source health from the engine registry. No synthetic fallback values.</div><div class="sourcegrid" id="sourcesGrid"></div></div></section>
+ <section id="analytics" class="page"><div class="row"><div class="card"><h3>Analytics</h3><div class="hint">Selected-day verified match distribution.</div><div id="analyticsBody"></div></div><div class="card"><h3>Digest</h3><div class="hint">Selected-day digest telemetry.</div><div id="digestBody"></div></div></div></section>
+</main>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const API="https://eybjpjhzwskfgskvnfbj.supabase.co/functions/v1/ba-control-api-v3";
+const REQUIRED_WINDOWS=["08:00","12:00","18:00","21:30"];
+let token=sessionStorage.getItem("ba_control_token")||"";
+let controlKey="";
+let selectedDate="";
+let state={analytics:null,overview:null,sources:null};
+
+function $(id){return document.getElementById(id)}
+function fmt(n){return Number(n||0).toLocaleString("en-IN")}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function toast(m){$("toast").textContent=m;$("toast").style.display="block";setTimeout(()=>$("toast").style.display="none",2500)}
+function setStatus(ok,msg){$("status").textContent=msg||"Connected";$("status").className="status"+(ok?"":" err")}
+
+async function api(resource,date){
+ const ctl=new AbortController();const t=setTimeout(()=>ctl.abort(),15000);
+ try{
+  const authHeaders=controlKey?{"x-ba-control-key":controlKey}:{Authorization:"Bearer "+token};
+  const r=await fetch(API+"?resource="+encodeURIComponent(resource)+"&date="+encodeURIComponent(date),{headers:authHeaders,cache:"no-store",signal:ctl.signal});
+  const text=await r.text();let data={};try{data=JSON.parse(text)}catch{}
+  if(!r.ok) throw new Error(data.error||("HTTP "+r.status));
+  return data;
+ }finally{clearTimeout(t)}
+}
+async function authenticate(t){
+ if(!t) throw new Error("No access token");
+ if(controlKey){token="";}else{token=t;}
+ const data=await api("analytics",selectedDate);
+ if(!controlKey) sessionStorage.setItem("ba_control_token",token);
+ $("login").classList.add("hidden");setStatus(true,"Connected");return data;
+}
+async function boot(){
+ const params=new URLSearchParams(location.search);const hashParams=new URLSearchParams((location.hash||"").replace(/^#/,""));const q=params.get("access")||hashParams.get("access");
+ const today=new Intl.DateTimeFormat("en-CA",{timeZone:"Asia/Kolkata"}).format(new Date());
+ const requested=params.get("date");
+ selectedDate=/^\d{4}-\d{2}-\d{2}$/.test(requested||"")?requested:today;
+ $("dateInput").value=selectedDate;$("dateInput").max=today;
+ if(q){history.replaceState({},document.title,location.pathname+(requested?("?date="+encodeURIComponent(requested)):""));try{await authenticate(q);await refreshAll();return}catch(e){$("loginErr").textContent=e.message||"Secure link rejected";}}
+ if(token){try{await authenticate(token);await refreshAll();return}catch(e){sessionStorage.removeItem("ba_control_token");token="";$("loginErr").textContent="Session expired. Use a fresh email link or the password fallback.";}}
+ $("loginMsg").textContent="Use the secure email link to open the dashboard, or enter the control password as a fallback.";
+}
+async function manualLogin(){
+ const k=$("keyInput").value.trim();if(!k){$("loginErr").textContent="Enter the control password.";return}
+ try{controlKey=k;token="";await authenticate(k);await refreshAll()}catch(e){controlKey="";token="";$("loginErr").textContent=e.message||"Access denied";setStatus(false,"Auth failed")}
+}
+async function refreshAll(){
+ if(!token&&!controlKey){return}
+ setStatus(true,"Refreshing…");
+ try{
+  const [a,o,s]=await Promise.all([api("analytics",selectedDate),api("overview",selectedDate),api("sources",selectedDate)]);
+  state={analytics:a,overview:o,sources:s};render();setStatus(true,"Live");toast("Dashboard refreshed");
+ }catch(e){setStatus(false,"Data error");toast(e.message||"Refresh failed")}
+}
+function deltaHtml(cur,prev,label){
+ if(prev===null||prev===undefined)return '<span class="delta">'+label+'</span>';
+ const d=Number(cur)-Number(prev), pct=prev?Math.round(d/prev*100):null;
+ if(pct===null)return '<span class="delta">'+label+'</span>';
+ return '<span class="delta '+(d>=0?"up":"down")+'">'+(d>=0?"+":"")+fmt(d)+" · "+(d>=0?"+":"")+pct+"% vs prior day</span>";
+}
+function render(){
+ const a=state.analytics||{},o=state.overview||{}, jobs=a.verifiedJobs||[];
+ const sm=a.selectedSummary||{};
+ $("kSourced").textContent=fmt(sm.sourced);$("dSourced").outerHTML=deltaHtml(sm.sourced,a.previousSummary?.sourced??null,"Selected day");
+ $("kVerified").textContent=fmt(a.verifiedCount);$("dVerified").outerHTML=deltaHtml(a.verifiedCount,a.previousVerifiedCount??null,"Direct URL verified");
+ $("kStrong").textContent=fmt(a.strongCount);$("kSources").textContent=fmt(a.activeSources);$("dSources").textContent=(a.directSources||0)+" direct · "+(a.discoverySources||0)+" discovery";
+ $("kCountries").textContent=fmt(a.countryCount);
+ renderTrend(a.trend||[]);renderMap(jobs,a.countryCount||0);renderRuns(a.selectedRuns||[], "runsMini");renderRuns(a.selectedRuns||[],"runsFull");
+ renderTypes(a.jobTypes||[]);renderSources(a.topSources||[]);renderRecent(a.recent||[]);
+ $("runHint").textContent="Latest run records for "+selectedDate+".";
+ renderSourceRegistry((state.sources||{}).sources||[]);
+ const digest=o.digest;
+ $("digestBody").innerHTML=digest?'<div class="empty"><b>Digest record present</b><br>Status: '+esc(digest.status||"—")+'<br>Created: '+esc(digest.created_at||"—")+'</div>':'<div class="empty">No digest telemetry for this date.</div>';
+ $("analyticsBody").innerHTML='<div class="jobs"><div class="job"><div><div class="jobtitle">Verified direct opportunities</div><div class="meta">Unique vacancy IDs after deduplication</div></div><div class="score">'+fmt(a.verifiedCount)+'</div></div><div class="job"><div><div class="jobtitle">Strong matches</div><div class="meta">Match class = strong</div></div><div class="score">'+fmt(a.strongCount)+'</div></div><div class="job"><div><div class="jobtitle">Countries represented</div><div class="meta">Derived from verified vacancy country fields/location text</div></div><div class="score">'+fmt(a.countryCount)+'</div></div></div>';
+}
+function renderTrend(rows){
+ const el=$("trend");if(!rows.length){el.innerHTML='<div class="empty" style="width:100%">No telemetry for the selected period.</div>';return}
+ const max=Math.max(1,...rows.map(x=>Number(x.sourced||0)));el.innerHTML=rows.map(x=>'<div class="barcol"><div class="barval">'+fmt(x.sourced)+'</div><div class="bar" style="height:'+Math.max(3,Math.round(Number(x.sourced||0)/max*165))+'px"></div><div class="barlabel">'+esc(x.date.slice(5))+'</div></div>').join("");
+}
+function renderMap(jobs,count){
+ const map=$("map");map.querySelectorAll(".dot").forEach(x=>x.remove());
+ const pos=[[18,21],[31,35],[46,22],[58,38],[70,27],[81,48],[39,61],[63,63],[22,55],[75,68]];
+ const seen=new Set();let i=0;
+ for(const j of jobs){const vals=Array.isArray(j.countries)?j.countries:[String(j.location_text||"").match(/(?:,|\s)([A-Za-z]{2})$/)?.[1]].filter(Boolean);for(const c of vals){const key=String(c).toUpperCase();if(seen.has(key))continue;seen.add(key);const p=pos[i++%pos.length];const d=document.createElement("div");d.className="dot";d.style.left=p[0]+"%";d.style.top=p[1]+"%";d.title=key;map.appendChild(d)}}
+ $("mapLegend").textContent=count?fmt(count)+" countries with verified opportunity telemetry":"No verified locations";
+}
+function renderRuns(runs,id){
+ const el=$(id);if(!runs.length){el.innerHTML='<div class="empty">No run telemetry for '+esc(selectedDate)+'.</div>';return}
+ el.innerHTML=runs.map(r=>'<div class="run"><div class="time">'+esc(String(r.window_time||"").slice(0,5))+' IST</div><div><b>'+fmt(r.fetched_jobs)+' fetched</b><div class="meta">'+fmt(r.eligible_jobs)+' eligible · '+fmt(r.strong_matches)+' strong</div></div><span class="pill '+esc(r.status||"scheduled")+'">'+esc(r.status||"—")+'</span></div>').join("");
+}
+function renderTypes(types){
+ const el=$("typeLegend"),donut=$("donut");if(!types.length){el.innerHTML='<div class="empty">No employment-type telemetry.</div>';donut.style.background="#eef0f4";return}
+ const total=types.reduce((s,x)=>s+Number(x.value||0),0)||1,stops=[];let p=0;const shades=["#5b54e8","#8b7cf6","#b7aefb","#d7d3fc","#c4c9d6","#aab2c4"];
+ el.innerHTML=types.map((x,i)=>{const q=Number(x.value||0)/total*100;const start=p;p+=q;stops.push(shades[i%shades.length]+" "+start+"% "+p+"%");return '<div class="leg"><span><i class="sw" style="background:'+shades[i%shades.length]+'"></i>'+esc(x.name)+'</span><b>'+fmt(x.value)+'</b></div>'}).join("");
+ donut.style.background="conic-gradient("+stops.join(",")+")";
+}
+function renderSources(sources){
+ const el=$("topSources");el.innerHTML=sources.length?sources.map(x=>'<div class="source"><b>'+esc(x.name)+'</b><small>'+fmt(x.value)+' verified matches</small></div>').join(""):'<div class="empty">No source telemetry.</div>';
+}
+function renderRecent(jobs){
+ const el=$("recent");el.innerHTML=jobs.length?jobs.map(j=>'<div class="job"><div><div class="jobtitle">'+esc(j.title||"Untitled BA role")+'</div><div class="meta">'+esc(j.employer_name||"Employer not stated")+" · "+esc(j.location_text||"Location not stated")+'</div><div class="meta">'+esc(j.match_class||"match")+" · seen "+esc(j.first_seen_at||"—")+'</div></div><div style="text-align:right"><div class="score">'+Number(j.match_score||0).toFixed(0)+'</div>'+(j.direct_url?'<a target="_blank" rel="noopener" href="'+esc(j.direct_url)+'">Open job ↗</a>':"")+'</div></div>').join(""):'<div class="empty">No verified opportunities for this date.</div>';
+}
+function renderSourceRegistry(rows){
+ const el=$("sourcesGrid");el.innerHTML=rows.length?rows.map(s=>'<div class="source"><b>'+esc(s.employer_name||s.source_key)+'</b><small>'+esc(s.provider||"provider")+" · "+(s.enabled?"enabled":"disabled")+(s.discovery_only?" · discovery":" · direct")+'</small><div class="meta">'+esc(s.last_success_at||s.last_checked_at||"No check recorded")+'</div></div>').join(""):'<div class="empty">No source registry telemetry.</div>';
+}
+document.querySelectorAll(".nav button").forEach(b=>b.addEventListener("click",()=>{document.querySelectorAll(".nav button").forEach(x=>x.classList.remove("active"));b.classList.add("active");document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));$(b.dataset.page).classList.add("active")}));
+$("dateInput").addEventListener("change",e=>{selectedDate=e.target.value;refreshAll()});
+boot();
+</script>
+</body>
+</html>
