@@ -877,7 +877,7 @@ function overview() {
             <h3>Your Daily Job-Hunt Journey</h3>
           </div>
           <div class="stepper">
-            ${["08:00", "12:00", "18:00", "22:00"].map((w, i) => {
+            ${["08:00", "12:00", "18:00", "21:30"].map((w, i) => {
               const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
               const now = istTime();
               const completed = !!r && String(r.status || "").toLowerCase() === "completed";
@@ -1060,7 +1060,7 @@ function runs() {
     <div class="card-box table-responsive">
       <table class="data-table">
         <tr><th>Window</th><th>Status</th><th>Sources</th><th>Fetched</th><th>New</th><th>Eligible</th><th>Strong</th><th>Moderate</th><th>Errors</th><th>Finished (IST)</th></tr>
-        ${["08:00", "12:00", "18:00", "22:00"].map(w => {
+        ${["08:00", "12:00", "18:00", "21:30"].map(w => {
           const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
           const isPending = w > istTime();
           return `
