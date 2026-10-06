@@ -14,17 +14,6 @@
 </head>
 <body class="text-slate-800 antialiased flex h-screen overflow-hidden">
 
-  <!-- Passwordless access: secure ?access= token is required. -->
-  <div id="auth-modal" class="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center hidden">
-    <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
-      <div class="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center font-bold text-lg mx-auto mb-4">BA</div>
-      <h2 class="text-xl font-bold text-slate-900 mb-1">Secure Control Centre</h2>
-      <p id="auth-message" class="text-xs text-slate-500 mb-6">This page requires a valid passwordless access link from the daily job-alert email.</p>
-      <button onclick="location.reload()" class="w-full bg-black hover:bg-slate-800 text-white font-medium py-2.5 rounded-lg text-sm transition">Close</button>
-      <p class="text-[10px] text-slate-400 mt-4">Supabase Control API • Asia/Kolkata</p>
-    </div>
-  </div>
-
   <!-- Sidebar -->
   <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 flex-shrink-0">
     <div>
@@ -89,7 +78,7 @@
           <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Engine Active (Live)
         </span>
         <span class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center">AG</span>
-        <button onclick="logout()" class="text-xs text-slate-400 hover:text-slate-600">Lock</button>
+        <span class="text-xs text-emerald-600 font-semibold">Live</span>
       </div>
     </header>
 
@@ -121,14 +110,14 @@
             </div>
           </div>
           <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Verified Matches</span>
+            <span class="text-xs text-slate-400 font-medium">Fresh Verified Matches</span>
             <span id="stat-verified" class="text-2xl font-bold text-slate-900 mt-2">--</span>
             <div class="w-full bg-emerald-100 h-1.5 rounded-full mt-3 overflow-hidden">
               <div class="bg-emerald-500 h-full w-3/4"></div>
             </div>
           </div>
           <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Top BA Matches</span>
+            <span class="text-xs text-slate-400 font-medium">Top Fresh BA Matches</span>
             <span id="stat-strong" class="text-2xl font-bold text-slate-900 mt-2">--</span>
             <div class="w-full bg-indigo-100 h-1.5 rounded-full mt-3 overflow-hidden">
               <div class="bg-indigo-600 h-full w-1/2"></div>
@@ -169,7 +158,7 @@
 
         <div class="col-span-12 lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-bold text-slate-900">Global Opportunities (Verified Matches)</h3>
+            <h3 class="text-sm font-bold text-slate-900">Global Opportunities (Fresh Verified Matches)</h3>
             <span class="text-[10px] text-slate-400">Top Locations</span>
           </div>
           <div id="location-list" class="space-y-2 my-2 overflow-y-auto max-h-56 pr-1 text-xs">
@@ -217,7 +206,7 @@
 
         <!-- Breakdown Doughnut -->
         <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 class="text-sm font-bold text-slate-900 mb-2">Job Type Breakdown (Final Matches)</h3>
+          <h3 class="text-sm font-bold text-slate-900 mb-2">Job Type Breakdown (Fresh Matches)</h3>
           <div class="h-44 relative flex items-center justify-center">
             <canvas id="typeChart"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
@@ -229,17 +218,17 @@
 
         <!-- Top Job Sources -->
         <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 class="text-sm font-bold text-slate-900 mb-4">Top Job Sources (by final matches)</h3>
+          <h3 class="text-sm font-bold text-slate-900 mb-4">Top Job Sources (by fresh matches)</h3>
           <div id="sources-breakdown" class="space-y-3 text-xs">
             <!-- Dynamically populated -->
           </div>
         </div>
       </div>
 
-      <!-- Bottom Row: Recent Verified BA Opportunities -->
+      <!-- Bottom Row: Recent Fresh Verified BA Opportunities -->
       <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-slate-900">Recent Verified BA Opportunities</h3>
+          <h3 class="text-sm font-bold text-slate-900">Recent Fresh Verified BA Opportunities</h3>
           <span class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">View all →</span>
         </div>
         <div id="job-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -259,72 +248,77 @@
   -->
   <!-- Frontend Logic & API Integration -->
   <script>
-    const API_URL = "https://eybjpjhzwskfgskvnfbj.supabase.co/functions/v1/ba-control-api-v3";
-    let token = null;
+    const SUPABASE_URL = "https://eybjpjhzwskfgskvnfbj.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_i6MHeeQhKDvJlJqVY7diA_AdMD3WOs";
+    const DASHBOARD_RPC = SUPABASE_URL + "/rest/v1/rpc/get_public_ba_dashboard";
     let trendChartInstance = null;
     let typeChartInstance = null;
+    let refreshTimer = null;
 
-    window.addEventListener("DOMContentLoaded", async () => {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tokenFromUrl = urlParams.get("access") || urlParams.get("token");
-      const savedToken = localStorage.getItem("ba_control_token");
-
-      if (tokenFromUrl) {
-        token = tokenFromUrl;
-        localStorage.setItem("ba_control_token", tokenFromUrl);
-        window.history.replaceState({}, document.title, window.location.pathname + window.location.hash);
-        await loadDashboard();
-      } else if (savedToken) {
-        token = savedToken;
-        await loadDashboard();
-      } else {
-        document.getElementById("auth-modal").classList.remove("hidden");
-      }
-    });
-
-    function logout() {
-      localStorage.removeItem("ba_control_token");
-      location.reload();
-    }
-
-    async function refreshData() {
-      await loadDashboard();
+    function todayIST() {
+      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
     }
 
     async function loadDashboard() {
+      const date = todayIST();
       try {
-        const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
-        const res = await fetch(`${API_URL}?resource=analytics&date=${encodeURIComponent(date)}`, {
+        const res = await fetch(DASHBOARD_RPC, {
+          method: "POST",
           headers: {
-            "Authorization": `Bearer ${token}`,
+            "apikey": SUPABASE_PUBLISHABLE_KEY,
             "Content-Type": "application/json"
-          }
+          },
+          body: JSON.stringify({ p_date: date }),
+          cache: "no-store"
         });
+        const raw = await res.text();
+        let payload = {};
+        try { payload = JSON.parse(raw); } catch (_) {}
+        if (!res.ok) throw new Error(payload.message || payload.error || ("HTTP " + res.status));
+        if (!payload.ok || !payload.analytics) throw new Error("Backend returned an invalid dashboard payload.");
 
-        if (res.status === 401 || res.status === 403) {
-          localStorage.removeItem("ba_control_token");
-          const apiStatus = document.getElementById("api-status");
-          if (apiStatus) apiStatus.innerText = "API: unauthorized";
-          document.getElementById("auth-modal").classList.remove("hidden");
-          return;
-        }
+        const data = {
+          today: payload.today,
+          selectedDate: payload.selectedDate,
+          selectedSummary: payload.analytics.selectedSummary || {},
+          previousSummary: payload.analytics.previousSummary || {},
+          trend: payload.analytics.trend || [],
+          topLocations: payload.analytics.topLocations || [],
+          jobTypes: payload.analytics.jobTypes || [],
+          topSources: payload.analytics.topSources || [],
+          recent: payload.analytics.recent || [],
+          verifiedJobs: payload.analytics.verifiedJobs || [],
+          verifiedCount: payload.analytics.verifiedCount || 0,
+          strongCount: payload.analytics.strongCount || 0,
+          countryCount: payload.analytics.countryCount || 0,
+          activeSources: payload.analytics.activeSources || 0,
+          selectedRuns: payload.analytics.selectedRuns || payload.runs || [],
+          dataStateLabel: payload.dataStateLabel || "Live backend telemetry",
+          applications: payload.applications || [],
+          config: payload.config || {}
+        };
 
-        const data = await res.json();
-        if (!res.ok || data.error) {
-          throw new Error(data.error || `Analytics API returned HTTP ${res.status}`);
-        }
-
-        const apiStatus = document.getElementById("api-status");
-        if (apiStatus) apiStatus.innerText = "API: live";
+        const status = document.getElementById("api-status");
+        if (status) status.innerText = "API: live";
         renderDashboard(data);
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(loadDashboard, 300000);
       } catch (err) {
         console.error("Dashboard load failed:", err);
-        const apiStatus = document.getElementById("api-status");
-        if (apiStatus) apiStatus.innerText = "API: error";
+        const status = document.getElementById("api-status");
+        if (status) status.innerText = "API: error";
         document.getElementById("welcome-subtext").innerText =
-          "Unable to load live Control Centre telemetry. Check the secure link and API status, then refresh.";
+          "Unable to load live Control Centre telemetry: " + (err.message || "unknown error");
+        if (refreshTimer) clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(loadDashboard, 60000);
       }
     }
+
+    function refreshData() {
+      loadDashboard();
+    }
+
+    window.addEventListener("DOMContentLoaded", loadDashboard);
     function escapeHtml(value) {
       return String(value ?? "")
         .replaceAll("&", "&amp;")
