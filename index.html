@@ -262,7 +262,7 @@
     async function loadDashboard() {
       const params = new URLSearchParams(window.location.search);
       const requestedDate = params.get("date");
-      const date = /^\\d{4}-\\d{2}-\\d{2}$/.test(requestedDate || "") ? requestedDate : todayIST();
+      const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || "") ? requestedDate : todayIST();
       if (params.has("access") || params.has("token")) {
         const clean = requestedDate ? window.location.pathname + "?date=" + encodeURIComponent(date) : window.location.pathname;
         window.history.replaceState({}, document.title, clean);
