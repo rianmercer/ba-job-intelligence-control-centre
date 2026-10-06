@@ -1,512 +1,1218 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BA Job Intelligence | Control Center</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-    .sidebar-active { background-color: #f1f5f9; color: #0f172a; font-weight: 600; }
-  </style>
-</head>
-<body class="text-slate-800 antialiased flex h-screen overflow-hidden">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BA Job Intelligence Control Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f3f6f8;
+  --card: #ffffff;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --border: #e2e8f0;
+  --blue: #2563eb;
+  --blue-light: #eff6ff;
+  --green: #10b981;
+  --green-light: #ecfdf5;
+  --purple: #8b5cf6;
+  --purple-light: #f5f3ff;
+  --amber: #f59e0b;
+  --amber-light: #fffbeb;
+  --rose: #f43f5e;
+  --rose-light: #fff1f2;
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.02);
+  --shadow-md: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.03);
+  --shadow-lg: 0 10px 25px -3px rgba(15,23,42,0.06), 0 4px 6px -4px rgba(15,23,42,0.02);
+  --radius-lg: 20px;
+  --radius-md: 14px;
+}
 
-  <!-- Sidebar -->
-  <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between p-4 flex-shrink-0">
-    <div>
-      <div class="flex items-center gap-3 px-2 py-3 mb-6">
-        <div class="w-9 h-9 bg-black text-white rounded-lg flex items-center justify-center font-bold">BA</div>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-main);
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+}
+
+button, input, select, textarea { font-family: inherit; }
+button { cursor: pointer; border: none; background: none; }
+.hidden { display: none !important; }
+
+/* Header */
+.top-nav {
+  height: 68px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+.brand-group { display: flex; align-items: center; gap: 12px; }
+.brand-logo {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: #090d16; color: #fff;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 15px; letter-spacing: -0.5px;
+}
+.brand-title { font-size: 15px; font-weight: 800; color: #0f172a; line-height: 1.2; }
+.brand-subtitle { font-size: 11px; color: var(--text-muted); font-weight: 500; }
+.header-actions { display: flex; align-items: center; gap: 12px; }
+.meta-chip {
+  display: flex; align-items: center; gap: 8px;
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: 12px; padding: 6px 14px;
+  font-size: 12px; font-weight: 600; color: #334155;
+}
+.status-pill {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--green-light); border: 1px solid #a7f3d0;
+  border-radius: 12px; padding: 6px 14px;
+  font-size: 12px; font-weight: 700; color: #047857;
+}
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #10b981; box-shadow: 0 0 0 2px rgba(16,185,129,0.25);
+  animation: pulse 2s infinite;
+}
+@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+.avatar-badge {
+  width: 36px; height: 36px; border-radius: 50%;
+  background: #e2e8f0; color: #475569;
+  display: grid; place-items: center;
+  font-weight: 700; font-size: 12px;
+}
+
+/* Shell Layout */
+.app-layout {
+  display: grid;
+  grid-template-columns: 195px minmax(0, 1fr);
+  min-height: calc(100vh - 68px);
+}
+aside {
+  background: #ffffff;
+  border-right: 1px solid var(--border);
+  padding: 20px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.nav-link {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 12px;
+  font-size: 13px; font-weight: 600; color: #64748b;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.nav-link:hover { background: #f8fafc; color: #0f172a; }
+.nav-link.active {
+  background: var(--blue-light); color: var(--blue);
+  font-weight: 700;
+}
+.nav-icon { font-size: 16px; width: 20px; text-align: center; }
+
+.side-card {
+  margin-top: auto;
+  background: linear-gradient(135deg, #f0fdf4 0%, #f8fafc 100%);
+  border: 1px solid #dcfce7;
+  border-radius: 16px;
+  padding: 16px;
+}
+.side-card-icon {
+  width: 28px; height: 28px; border-radius: 8px;
+  background: #10b981; color: #fff; display: grid;
+  place-items: center; margin-bottom: 10px; font-size: 14px;
+}
+.side-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 4px; color: #0f172a; }
+.side-card p { font-size: 11px; line-height: 1.45; color: #64748b; }
+
+main { padding: 22px 28px 48px; max-width: 1540px; margin: 0 auto; width: 100%; }
+
+/* Refined Dashboard View */
+.dash-container { display: flex; flex-direction: column; gap: 18px; }
+
+/* Hero Banner & KPI Row */
+.hero-row { display: grid; grid-template-columns: 1.35fr 2.15fr; gap: 16px; align-items: stretch; }
+.narrator-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fbfd 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 16px 20px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  align-items: center;
+}
+.narrator-img-wrap {
+  width: 205px; height: 210px; flex: 0 0 205px; z-index: 2;
+  position: relative; margin-bottom: -16px;
+  display:flex; align-items:flex-end; justify-content:center;
+  animation: floatNarrator 4.5s ease-in-out infinite;
+}
+.narrator-img-wrap img.narrator-scene {
+  width: 100%; height: 100%; object-fit: contain; object-position: center bottom;
+  display: block; filter: drop-shadow(0 12px 16px rgba(0,0,0,0.08));
+  transform-origin: 50% 85%;
+}
+@keyframes narratorTalk {
+  0%,100% { transform: translateY(0) rotate(0deg) scale(1); }
+  45% { transform: translateY(-2px) rotate(-0.35deg) scale(1.006); }
+  70% { transform: translateY(1px) rotate(0.25deg) scale(1); }
+}
+.narrator-scene { animation: narratorTalk 3.8s ease-in-out infinite; }
+@keyframes floatNarrator {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.narrator-bubble {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  box-shadow: var(--shadow-md);
+  position: relative;
+  z-index: 2;
+  margin-left: -10px;
+}
+.narrator-bubble h2 {
+  font-size: 20px; font-weight: 800; color: #0f172a;
+  margin-bottom: 8px; display: flex; align-items: center; gap: 6px;
+}
+.narrator-bubble p {
+  font-size: 12.5px; line-height: 1.55; color: #475569;
+}
+.narrator-bubble b { color: var(--blue); font-weight: 700; }
+
+.kpi-deck { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+.kpi-card {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 16px;
+  box-shadow: var(--shadow-sm); display: flex; flex-direction: column;
+  justify-content: space-between; transition: transform 0.2s, box-shadow 0.2s;
+}
+.kpi-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+.kpi-icon {
+  width: 36px; height: 36px; border-radius: 11px;
+  display: grid; place-items: center; font-size: 16px;
+  margin-bottom: 12px;
+}
+.kpi-val { font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: #0f172a; line-height: 1.1; margin-bottom: 2px; }
+.kpi-lbl { font-size: 11px; font-weight: 700; color: #475569; }
+.kpi-growth {
+  display: inline-flex; align-items: center; gap: 3px;
+  font-size: 10px; font-weight: 700; color: #10b981; margin-top: 4px;
+}
+.kpi-sub { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+.spark-bars { display: flex; gap: 2px; align-items: flex-end; height: 16px; margin-top: 8px; }
+.spark-bars i { flex: 1; border-radius: 2px; }
+
+/* Visual Grids */
+.visual-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; }
+.card-box {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 20px;
+  box-shadow: var(--shadow-sm);
+}
+.box-header { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 16px; }
+.box-header h3 { font-size: 14.5px; font-weight: 800; color: #0f172a; }
+.box-header h3 span { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+.box-legend { display: flex; gap: 14px; font-size: 11px; font-weight: 600; color: #64748b; }
+.box-legend span { display: flex; align-items: center; gap: 5px; }
+.box-legend i { width: 8px; height: 8px; border-radius: 50%; }
+
+/* Trend Bars */
+.chart-body {
+  height: 230px; display: flex; align-items: flex-end;
+  gap: 12px; padding: 10px 4px 28px;
+  position: relative; border-bottom: 1px solid #f1f5f9;
+}
+.chart-col {
+  flex: 1; display: flex; align-items: flex-end; justify-content: center;
+  gap: 4px; height: 100%; position: relative;
+}
+.col-bar {
+  width: 24%; border-radius: 5px 5px 2px 2px;
+  position: relative; transition: height 0.4s ease;
+}
+.col-bar.s { background: #3b82f6; }
+.col-bar.v { background: #10b981; }
+.col-bar.m { background: #8b5cf6; }
+.col-bar-val {
+  position: absolute; top: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 8.5px; font-weight: 700; color: #475569;
+}
+.col-date {
+  position: absolute; bottom: -24px; font-size: 10px;
+  font-weight: 600; color: #64748b; white-space: nowrap;
+}
+.col-highlight {
+  position: absolute; inset: -8px -6px 20px;
+  background: #f1f5f9; border-radius: 12px; z-index: 0;
+}
+
+/* Map & Top Countries */
+.map-layout { display: grid; grid-template-columns: 1fr 140px; gap: 12px; min-height: 220px; align-items: center; }
+.vector-map {
+  height: 210px; position: relative;
+  background-image: radial-gradient(#cbd5e1 1.2px, transparent 1.2px);
+  background-size: 8px 8px; border-radius: 14px;
+}
+.map-pin {
+  position: absolute; background: #ffffff;
+  border: 1px solid #cbd5e1; border-radius: 10px;
+  padding: 5px 8px; box-shadow: var(--shadow-md);
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; gap: 5px;
+}
+.map-pin b { color: #0f172a; font-size: 10.5px; }
+.map-pin span { color: var(--text-muted); font-size: 9px; }
+.pin-dot { width: 7px; height: 7px; border-radius: 50%; }
+
+.map-rank-list { display: flex; flex-direction: column; gap: 8px; }
+.map-rank-item {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; font-weight: 600; color: #334155;
+  padding: 6px 8px; background: #f8fafc; border-radius: 8px;
+}
+.map-rank-item b { color: var(--blue); font-weight: 800; }
+
+/* Lower Tri-Deck */
+.tri-grid { display: grid; grid-template-columns: 1.15fr 0.95fr 1fr; gap: 16px; }
+
+/* Stepper Journey */
+.stepper { display: grid; grid-template-columns: repeat(4, 1fr); position: relative; margin-top: 24px; }
+.stepper::before {
+  content: ""; position: absolute; left: 12%; right: 12%; top: 14px;
+  height: 2px; background: #e2e8f0; z-index: 1;
+}
+.step-node { text-align: center; position: relative; z-index: 2; }
+.step-circle {
+  width: 30px; height: 30px; border-radius: 50%;
+  margin: 0 auto 10px; background: #ffffff;
+  border: 2px solid var(--border); display: grid;
+  place-items: center; font-size: 12px; font-weight: 800; color: #94a3b8;
+}
+.step-node.done .step-circle {
+  background: var(--green); border-color: var(--green); color: #fff;
+  box-shadow: 0 0 0 3px rgba(16,185,129,0.2);
+}
+.step-node.active .step-circle {
+  background: #ffffff; border-color: var(--blue); color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.2);
+}
+.step-title { font-size: 11px; font-weight: 800; color: #0f172a; }
+.step-time { font-size: 10px; color: var(--text-muted); margin-top: 1px; }
+.step-stat { font-size: 9.5px; font-weight: 600; color: #334155; margin-top: 3px; }
+
+/* Donut Breakdown */
+.donut-box { display: flex; align-items: center; gap: 16px; padding-top: 8px; }
+.donut-ring {
+  width: 120px; height: 120px; border-radius: 50%;
+  position: relative; flex-shrink: 0;
+}
+.donut-ring::after {
+  content: ""; position: absolute; inset: 24px;
+  background: #ffffff; border-radius: 50%;
+}
+.donut-center {
+  position: absolute; inset: 0; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  z-index: 3;
+}
+.donut-center b { font-size: 22px; font-weight: 800; color: #0f172a; line-height: 1; }
+.donut-center span { font-size: 9px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin-top: 2px; }
+
+.donut-legend { display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.donut-legend-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 11px; font-weight: 600; color: #334155;
+}
+.donut-legend-row span { display: flex; align-items: center; gap: 6px; }
+.donut-legend-row i { width: 7px; height: 7px; border-radius: 50%; }
+
+/* Source Contribution */
+.source-bars { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.source-item {
+  display: grid; grid-template-columns: 24px 105px 1fr 30px;
+  align-items: center; gap: 8px; font-size: 11px; font-weight: 600; color: #334155;
+}
+.source-logo {
+  width: 22px; height: 22px; border-radius: 6px;
+  background: #f1f5f9; display: grid; place-items: center;
+  font-size: 10px; font-weight: 800; color: #475569;
+}
+.source-track { height: 6px; border-radius: 99px; background: #f1f5f9; overflow: hidden; }
+.source-fill { height: 100%; border-radius: 99px; background: #3b82f6; }
+.source-count { text-align: right; font-weight: 700; color: #0f172a; }
+
+/* Recent Verified Opportunities */
+.recent-opps { margin-top: 4px; }
+.recent-opps-grid {
+  display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px; margin-top: 14px; width: 100%; min-width: 0; overflow: hidden;
+}
+.recent-card {
+  background: #ffffff; border: 1px solid var(--border);
+  border-radius: var(--radius-md); padding: 14px;
+  display: flex; gap: 12px; align-items: flex-start;
+  transition: all 0.2s ease; min-width: 0; max-width: 100%; overflow: hidden;
+}
+.recent-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #cbd5e1; }
+.recent-logo {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: #0f172a; color: #fff; display: grid;
+  place-items: center; font-weight: 800; font-size: 14px;
+  flex-shrink: 0;
+}
+.recent-info { flex: 1 1 auto; min-width: 0; overflow: hidden; }
+.recent-title {
+  font-size: 12px; font-weight: 800; color: #0f172a;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
+  min-width: 0; max-width: 100%;
+}
+.recent-meta {
+  font-size: 10.5px; color: var(--text-muted);
+  margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.recent-tags { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.badge-direct {
+  background: #ecfdf5; color: #059669; font-size: 9px;
+  font-weight: 700; padding: 2px 7px; border-radius: 6px;
+}
+.badge-match {
+  background: #eff6ff; color: #2563eb; font-size: 9px;
+  font-weight: 700; padding: 2px 7px; border-radius: 6px;
+}
+.badge-match.moderate { background: #fffbeb; color: #d97706; }
+.badge-time { font-size: 9.5px; color: #94a3b8; margin-left: auto; }
+
+/* Interactive Creative Login Screen */
+.login-screen {
+  min-height: 100vh; display: grid; place-items: center;
+  background: radial-gradient(circle at 10% 20%, #eff6ff 0%, #f8fafc 90%);
+  padding: 20px; position: relative; overflow: hidden;
+}
+.login-screen::before {
+  content: ""; position: absolute; width: 450px; height: 450px;
+  border-radius: 50%; background: #dbeafe; filter: blur(80px);
+  top: 10%; right: 15%; z-index: 1; opacity: 0.6;
+}
+.login-card {
+  width: min(440px, 100%);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(16px);
+  border: 1px solid #ffffff;
+  border-radius: 28px;
+  padding: 38px;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.12);
+  position: relative; z-index: 2;
+  text-align: center;
+}
+.login-brand-icon {
+  width: 58px; height: 58px; border-radius: 16px;
+  background: #090d16; color: #fff;
+  display: grid; place-items: center;
+  font-size: 24px; font-weight: 900;
+  margin: 0 auto 16px;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+}
+.login-card h1 { font-size: 22px; font-weight: 800; color: #0f172a; margin-bottom: 6px; }
+.login-card p { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin-bottom: 24px; }
+.login-input-group { text-align: left; margin-bottom: 18px; }
+.login-input-group label { display: block; font-size: 11px; font-weight: 700; color: #475569; margin-bottom: 6px; }
+.login-input {
+  width: 100%; border: 1.5px solid var(--border);
+  border-radius: 12px; padding: 12px 14px;
+  font-size: 13px; outline: none; background: #ffffff;
+  transition: all 0.2s ease;
+}
+.login-input:focus { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+.login-submit-btn {
+  width: 100%; background: #090d16; color: #ffffff;
+  border-radius: 12px; padding: 13px; font-size: 13.5px;
+  font-weight: 700; transition: all 0.2s ease;
+}
+.login-submit-btn:hover { background: #1e293b; transform: translateY(-1px); }
+
+/* Standard Controls (Jobs, Runs, Settings) */
+.tools-bar { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+.form-input {
+  border: 1px solid var(--border); background: #ffffff;
+  padding: 10px 14px; border-radius: 10px; font-size: 12px; outline: none;
+}
+.table-responsive { width: 100%; overflow-x: auto; }
+.data-table { width: 100%; border-collapse: collapse; min-width: 780px; }
+.data-table th, .data-table td { padding: 12px; text-align: left; font-size: 11px; border-bottom: 1px solid #f1f5f9; }
+.data-table th { font-weight: 700; color: var(--text-muted); text-transform: uppercase; font-size: 10px; background: #f8fafc; }
+.toast-notice {
+  position: fixed; bottom: 20px; right: 20px;
+  background: #0f172a; color: #ffffff; padding: 12px 18px;
+  border-radius: 12px; font-size: 12px; font-weight: 600;
+  box-shadow: var(--shadow-lg); z-index: 100;
+}
+
+@media (max-width: 1200px) {
+  .hero-row, .visual-grid, .tri-grid { grid-template-columns: 1fr; }
+  .kpi-deck { grid-template-columns: repeat(3, 1fr); }
+  .recent-opps-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 768px) {
+  .app-layout { grid-template-columns: 1fr; }
+  aside { display: none; }
+  .kpi-deck { grid-template-columns: repeat(2, 1fr); }
+  .recent-opps-grid { grid-template-columns: 1fr; }
+  main { padding: 16px; }
+}
+
+
+/* Final layout hardening */
+@media (max-width: 1280px) {
+  .recent-opps-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .hero-row { grid-template-columns: 1fr; }
+  .narrator-card { min-height: 250px; }
+}
+@media (max-width: 760px) {
+  .recent-opps-grid { grid-template-columns: 1fr; }
+  .narrator-img-wrap { width: 170px; height: 180px; flex-basis: 170px; }
+}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="toast" class="toast-notice hidden"></div>
+
+<script>
+// v7 PASSWORDLESS: public dashboard data comes from Supabase RPC; no job/metric telemetry is hardcoded.
+// Optional ?access= from the EOD email unlocks private application telemetry and privileged POST controls.
+const SUPABASE_URL = "https://eybjpjhzwskfgskvnfbj.supabase.co";
+const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_i6MHeQhKDvJlJqVYk7diA_AdMD3WOs";
+const PUBLIC_DASHBOARD_RPC = SUPABASE_URL + "/rest/v1/rpc/get_public_ba_dashboard";
+const CONTROL_API = SUPABASE_URL + "/functions/v1/ba-control-api-v3";
+const S = { key: "", page: "overview", selectedDate: new Intl.DateTimeFormat("en-CA", {timeZone:"Asia/Kolkata"}).format(new Date()), data: null, analytics: null, sources: [], jobs: [] };
+const $ = id => document.getElementById(id);
+const arr = x => Array.isArray(x) ? x : [];
+const esc = x => String(x ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmt = x => x ? new Date(x).toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Kolkata" }) : "—";
+const fmtDate = d => new Date(d + "T00:00:00+05:30").toLocaleDateString("en-IN", { day: "2-digit", month: "short", timeZone: "Asia/Kolkata" });
+const istTime = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
+const snapshotLabel = () => S.selectedDate ? fmtDate(S.selectedDate) + " (IST)" : "Selected day";
+const accessParams = new URLSearchParams(location.search);
+const accessToken = accessParams.get("access") || accessParams.get("token") || "";
+if (accessToken) {
+  accessParams.delete("access");
+  accessParams.delete("token");
+  const cleanQuery = accessParams.toString();
+  window.history.replaceState({}, document.title, window.location.pathname + (cleanQuery ? "?" + cleanQuery : ""));
+}
+
+function toast(m) {
+  $("toast").textContent = m;
+  $("toast").classList.remove("hidden");
+  clearTimeout(window._t);
+  window._t = setTimeout(() => $("toast").classList.add("hidden"), 3000);
+}
+
+async function publicDashboard(date) {
+  const res = await fetch(PUBLIC_DASHBOARD_RPC, {
+    method: "POST",
+    headers: { "apikey": SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+    body: JSON.stringify({ p_date: date }),
+    cache: "no-store"
+  });
+  const text = await res.text();
+  let payload = {};
+  try { payload = JSON.parse(text); } catch (_) {}
+  if (!res.ok) throw new Error(payload.message || payload.error || ("HTTP " + res.status));
+  if (!payload.ok || !payload.analytics) throw new Error("Backend returned an invalid public dashboard payload.");
+  return payload;
+}
+
+async function secureOverview(date) {
+  if (!accessToken) return null;
+  const res = await fetch(CONTROL_API + "?resource=overview&date=" + encodeURIComponent(date), {
+    headers: { "x-ba-control-key": accessToken, "Cache-Control": "no-cache" },
+    cache: "no-store"
+  });
+  if (!res.ok) return null;
+  const body = await res.json();
+  if (body?.error) return null;
+  return body;
+}
+
+async function api(resource, options = {}) {
+  const method = (options.method || "GET").toUpperCase();
+  if (method === "POST") {
+    if (!accessToken) throw new Error("This control action requires the secure access link from the EOD email.");
+    const res = await fetch(CONTROL_API + "?date=" + encodeURIComponent(S.selectedDate), {
+      ...options,
+      headers: { "Content-Type": "text/plain;charset=UTF-8", "x-ba-control-key": accessToken, ...(options.headers || {}) },
+      cache: "no-store"
+    });
+    const text = await res.text();
+    let body = {};
+    try { body = JSON.parse(text); } catch (_) {}
+    if (!res.ok || body.error) throw new Error(body.error || ("HTTP " + res.status));
+    return body;
+  }
+
+  const payload = await publicDashboard(S.selectedDate);
+  if (resource === "analytics") return payload.analytics || {};
+  if (resource === "sources") return { sources: payload.sources || [] };
+  return {
+    today: payload.today,
+    selectedDate: payload.selectedDate,
+    jobs: payload.jobs || [],
+    applications: payload.applications || [],
+    runs: payload.runs || [],
+    digest: payload.digest || null,
+    health: payload.health || null,
+    config: payload.config || {}
+  };
+}
+
+async function load(date = S.selectedDate) {
+  S.selectedDate = date || S.selectedDate;
+  S.data = null; S.analytics = null; S.jobs = []; S.sources = [];
+
+  const payload = await publicDashboard(S.selectedDate);
+  S.analytics = payload.analytics || {};
+  S.jobs = S.analytics.verifiedJobs || payload.jobs || [];
+  S.data = {
+    today: payload.today,
+    selectedDate: payload.selectedDate,
+    jobs: payload.jobs || [],
+    applications: payload.applications || [],
+    runs: payload.runs || [],
+    digest: payload.digest || null,
+    health: payload.health || null,
+    config: payload.config || {}
+  };
+  S.sources = payload.sources || [];
+
+  // A valid EOD access token unlocks private application/application-workflow
+  // telemetry and privileged controls. The normal dashboard remains passwordless.
+  const secured = await secureOverview(S.selectedDate);
+  if (secured) {
+    S.data.applications = secured.applications || S.data.applications;
+    S.data.config = secured.config || S.data.config;
+    S.data.health = secured.health || S.data.health;
+    S.data.digest = secured.digest || S.data.digest;
+    S.data.runs = secured.runs || S.data.runs;
+  }
+}
+
+async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboard refreshed") {
+  const btn = $("refreshAll");
+  if (btn) { btn.disabled = true; btn.textContent = "↻ Refreshing…"; }
+  try {
+    await load(date);
+    render();
+    toast(successMessage);
+  } catch (err) {
+    toast(err.message || "Could not refresh dashboard");
+  } finally {
+    const b = $("refreshAll");
+    if (b) { b.disabled = false; b.textContent = "↻ Refresh"; }
+  }
+}
+
+function boot() {
+  load().then(() => {
+    renderShell();
+    render();
+    toast(accessToken ? "Live Supabase dashboard connected" : "Live public dashboard connected");
+  }).catch(e => {
+    console.error("BA Control Centre boot:", e);
+    toast("Could not load live Supabase dashboard: " + (e.message || "unknown error"));
+  });
+}
+
+if (document.readyState === "loading") window.addEventListener("DOMContentLoaded", boot);
+else boot();
+
+async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboard refreshed") {
+  const btn = $("refreshAll");
+  if (btn) { btn.disabled = true; btn.textContent = "↻ Refreshing…"; }
+  try {
+    await load(date);
+    render();
+    toast(successMessage);
+  } catch (err) {
+    toast(err.message || "Could not refresh dashboard");
+  } finally {
+    const b = $("refreshAll");
+    if (b) { b.disabled = false; b.textContent = "↻ Refresh"; }
+  }
+}
+
+function renderShell() {
+  $("app").innerHTML = `
+    <header class="top-nav">
+      <div class="brand-group">
+        <div class="brand-logo">BA</div>
         <div>
-          <h1 class="text-sm font-bold leading-none">BA Job Intelligence</h1>
-          <span class="text-[10px] text-slate-400">Control Center • Asia/Kolkata</span>
+          <div class="brand-title">BA Job Intelligence</div>
+          <div class="brand-subtitle">Control Center • Live backend • Asia/Kolkata</div>
         </div>
       </div>
-      <nav class="space-y-1">
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm sidebar-active">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
-          Overview
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-          Jobs
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-          Runs
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/></svg>
-          Sources
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
-          Analytics
-        </a>
-        <a href="#" class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-slate-600 hover:bg-slate-50">
-          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0"/></svg>
-          Settings
-        </a>
-      </nav>
-    </div>
-    <div class="p-3 bg-slate-50 rounded-xl border border-slate-100 text-xs">
-      <div class="flex items-center gap-2 mb-1">
-        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-        <span class="font-semibold text-slate-700">Less noise. Better signal.</span>
-      </div>
-      <p class="text-[11px] text-slate-400">Surfaces only live, direct-verified BA opportunities.</p>
-    </div>
-  </aside>
-
-  <!-- Main Content Area -->
-  <main class="flex-1 flex flex-col h-screen overflow-y-auto">
-    <!-- Header -->
-    <header class="bg-white border-b border-slate-200 px-8 py-3.5 flex items-center justify-between sticky top-0 z-20">
-      <div class="flex items-center gap-3">
-        <span class="text-xs bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-200 font-medium flex items-center gap-2">
-          <span>📅</span> RUN DAY: <span id="header-date">--</span>
-        </span>
-        <button onclick="refreshData()" class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium ml-2">
-          <span>🔄</span> Refresh
-        </button>
-      </div>
-      <div class="flex items-center gap-3">
-        <span id="api-status" class="text-[10px] text-slate-400">API: checking…</span>
-        <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
-          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span> Engine Active (Live)
-        </span>
-        <span class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 font-bold text-xs flex items-center justify-center">AG</span>
-        <span class="text-xs text-emerald-600 font-semibold">Live</span>
+      <div class="header-actions">
+        <div class="meta-chip" style="gap:8px;">
+          <span style="font-size:14px;">📅</span>
+          <label for="dayPicker" style="font-size:10px;color:#64748b;font-weight:700;">RUN DAY</label>
+          <input id="dayPicker" type="date" value="${esc(S.selectedDate)}" style="border:0;background:transparent;color:#0f172a;font-size:12px;font-weight:700;outline:none;">
+        </div>
+        <button id="refreshAll" class="form-input" style="padding:8px 12px; font-size:11px; font-weight:800; white-space:nowrap;">↻ Refresh</button>
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          <div>Engine Active <span style="font-size: 10px; opacity: 0.8; font-weight: 500;">(Live)</span></div>
+        </div>
+        <div class="avatar-badge">AG</div>
+        <button id="logout" style="font-size: 12px; font-weight: 700; color: #64748b; padding: 6px 10px; border-radius: 8px; border: 1px solid #e2e8f0; margin-left: 4px;">Lock</button>
       </div>
     </header>
-
-    <div class="p-8 space-y-6 max-w-7xl">
-      <!-- Top Row: Welcome Banner + Metric Cards -->
-      <div class="grid grid-cols-12 gap-5">
-        <!-- Personal Greeting Banner -->
-        <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 flex flex-col justify-between shadow-sm">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2 mb-2">
-              Hey Akshay! 👋
-            </h2>
-            <p id="welcome-subtext" class="text-xs text-slate-500 leading-relaxed">
-              Fetching today's latest verified BA opportunities across India, Europe, Gulf, and international markets.
-            </p>
-          </div>
-          <p class="text-[11px] text-slate-400 mt-4 flex items-center gap-1">
-            <span>🛡️</span> Zero aggregator noise • 100% direct application links
-          </p>
+    <div class="app-layout">
+      <aside>
+        <button class="nav-link active" data-p="overview"><span class="nav-icon">🏠</span>Overview</button>
+        <button class="nav-link" data-p="jobs"><span class="nav-icon">💼</span>Jobs</button>
+        <button class="nav-link" data-p="runs"><span class="nav-icon">⏱</span>Runs</button>
+        <button class="nav-link" data-p="sources"><span class="nav-icon">🗄</span>Sources</button>
+        <button class="nav-link" data-p="analytics"><span class="nav-icon">📊</span>Analytics</button>
+        <button class="nav-link" data-p="settings"><span class="nav-icon">⚙️</span>Settings</button>
+        <div class="side-card">
+          <div class="side-card-icon">🎯</div>
+          <h4>Less noise.<br>Better signal.</h4>
+          <p>Surfaces only live, direct-verified BA opportunities and automation telemetry.</p>
         </div>
+      </aside>
+      <main id="main"></main>
+    </div>`;
 
-        <!-- 5 Metric Cards -->
-        <div class="col-span-12 lg:col-span-8 grid grid-cols-2 md:grid-cols-5 gap-3">
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Jobs Sourced</span>
-            <span id="stat-sourced" class="text-2xl font-bold text-slate-900 mt-2">--</span>
-            <div class="w-full bg-blue-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div class="bg-blue-600 h-full w-full"></div>
+  document.querySelectorAll(".nav-link").forEach(btn => {
+    btn.onclick = () => {
+      S.page = btn.dataset.p;
+      document.querySelectorAll(".nav-link").forEach(x => x.classList.toggle("active", x === btn));
+      render();
+    };
+  });
+  $("logout").onclick = () => { window.history.replaceState({}, document.title, window.location.pathname); location.reload(); };
+  $("dayPicker").onchange = async (e) => {
+    const d = e.target.value;
+    if (!d) return;
+    await refreshDashboard(d, "Loaded " + fmtDate(d) + " telemetry");
+  };
+  $("refreshAll").onclick = async () => {
+    await refreshDashboard(S.selectedDate, "Dashboard refreshed");
+  };
+}
+
+function uniqueJobs() {
+  const m = new Map();
+  for (const j of arr(S.jobs)) {
+    if (j.direct_url_verified !== true || j.status === "stale") continue;
+    if (!m.has(j.vacancy_id)) m.set(j.vacancy_id, j);
+  }
+  return [...m.values()];
+}
+
+function overview() {
+  const trend = arr(S.analytics?.trend).slice(-7);
+  const mx = Math.max(1, ...trend.map(x => +x.sourced || 0));
+  const locs = arr(S.analytics?.topLocations);
+  const types = arr(S.analytics?.jobTypes);
+  const srcs = arr(S.analytics?.topSources);
+
+  const recent = arr(S.analytics?.recent).slice(0, 4);
+  const latest = S.analytics?.selectedSummary || {};
+  const previous = S.analytics?.previousSummary || {};
+  const sourced = Number(latest.sourced || 0);
+  const verified = Number(S.analytics?.verifiedCount || 0);
+  const strong = Number(S.analytics?.strongCount || 0);
+  const activeSources = Number(S.analytics?.activeSources || S.sources.filter(x => x.enabled).length || 0);
+  const countryCount = Number(S.analytics?.countryCount || 0);
+  const pct = (a,b) => Number(b||0) ? ((Number(a||0)-Number(b||0))/Number(b||0)*100).toFixed(0) : null;
+  const narrative = sourced
+    ? `<b>${fmtDate(S.selectedDate)}</b> sourced <b>${sourced.toLocaleString()}</b> opportunities and produced <b>${verified}</b> eligible matches, including <b>${strong}</b> strong BA matches across ${Number(latest.runs||0)} recorded windows.`
+    : `No completed telemetry is recorded for ${fmtDate(S.selectedDate)} yet.`;
+  const growthS = pct(sourced, previous.sourced);
+  const growthV = pct(verified, S.analytics?.previousVerifiedCount);
+  const growthM = pct(strong, S.analytics?.previousStrongCount);
+
+  // SVG Illustrated Narrator Likeness
+  const narratorSvg = `<div class="narrator-img-wrap" style="width:120px;height:120px;display:grid;place-items:center;background:#eef2ff;border-radius:28px;color:#1d4ed8;font-size:42px;font-weight:800;">BA</div>`;
+
+  const trendHtml = trend.length ? trend.map((x, i) => {
+    const isSelected = x.date === S.selectedDate;
+    const hSourced = Math.max(12, Math.round((+x.sourced || 0) / mx * 160));
+    const hVerified = Math.max(8, Math.round((+x.verified || 0) / Math.max(1, ...trend.map(y => Number(y.verified || 0))) * 160));
+    const hMatches = Math.max(6, Math.round((+x.verifiedStrong || 0) / Math.max(1, ...trend.map(y => Number(y.verifiedStrong || 0))) * 160));
+    return `
+      <div class="chart-col">
+        ${isSelected ? '<div class="col-highlight"></div>' : ''}
+        <div class="col-bar s" style="height:${hSourced}px"><span class="col-bar-val">${(+x.sourced || 0).toLocaleString()}</span></div>
+        <div class="col-bar v" style="height:${hVerified}px"><span class="col-bar-val">${+x.verified || 0}</span></div>
+        <div class="col-bar m" style="height:${hMatches}px"><span class="col-bar-val">${+x.verifiedStrong || 0}</span></div>
+        <span class="col-date">${fmtDate(x.date)}</span>
+      </div>`;
+  }).join("") : `<div style="padding:30px;color:#94a3b8;">No telemetry for ${fmtDate(S.selectedDate)}.</div>`;
+
+  $("main").innerHTML = `
+    <div class="dash-container">
+      <div class="hero-row">
+        <section class="narrator-card">
+          <div class="narrator-img-wrap">${narratorSvg}</div>
+          <div class="narrator-bubble">
+            <h2>Hey Akshay! 👋</h2>
+            <p>${narrative}</p>
+            <p style="margin-top: 6px; font-weight: 700; color: #1e293b;">I’ll keep watching the global pool and surface only the roles that pass the engine gates. 🚀</p>
+          </div>
+        </section>
+
+        <section class="kpi-deck">
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#eff6ff; color:#2563eb;">🔍</div>
+            <div class="kpi-val">${sourced.toLocaleString()}</div>
+            <div class="kpi-lbl">Jobs Sourced</div>
+            <div class="kpi-growth">${growthS===null?'—':(Number(growthS)>=0?'↑ ':'↓ ')+Math.abs(Number(growthS))+'%'} <span style="color:#64748b; font-weight:500;">vs prev day</span></div>
+            <div class="spark-bars">
+              <i style="background:#bfdbfe; height:40%;"></i><i style="background:#bfdbfe; height:60%;"></i>
+              <i style="background:#bfdbfe; height:80%;"></i><i style="background:#2563eb; height:100%;"></i>
             </div>
           </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Fresh Verified Matches</span>
-            <span id="stat-verified" class="text-2xl font-bold text-slate-900 mt-2">--</span>
-            <div class="w-full bg-emerald-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div class="bg-emerald-500 h-full w-3/4"></div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#ecfdf5; color:#10b981;">🛡</div>
+            <div class="kpi-val">${verified.toLocaleString()}</div>
+            <div class="kpi-lbl">Fresh Verified Matches</div>
+            <div class="kpi-growth">${growthV===null?'—':(Number(growthV)>=0?'↑ ':'↓ ')+Math.abs(Number(growthV))+'%'} <span style="color:#64748b; font-weight:500;">vs prev day</span></div>
+            <div class="spark-bars">
+              <i style="background:#a7f3d0; height:30%;"></i><i style="background:#a7f3d0; height:50%;"></i>
+              <i style="background:#a7f3d0; height:75%;"></i><i style="background:#10b981; height:100%;"></i>
             </div>
           </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Top Fresh BA Matches</span>
-            <span id="stat-strong" class="text-2xl font-bold text-slate-900 mt-2">--</span>
-            <div class="w-full bg-indigo-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div class="bg-indigo-600 h-full w-1/2"></div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#f5f3ff; color:#8b5cf6;">🎯</div>
+            <div class="kpi-val">${strong.toLocaleString()}</div>
+            <div class="kpi-lbl">Top Fresh BA Matches</div>
+            <div class="kpi-growth">${growthM===null?'—':(Number(growthM)>=0?'↑ ':'↓ ')+Math.abs(Number(growthM))+'%'} <span style="color:#64748b; font-weight:500;">vs prev day</span></div>
+            <div class="spark-bars">
+              <i style="background:#ddd6fe; height:45%;"></i><i style="background:#ddd6fe; height:60%;"></i>
+              <i style="background:#ddd6fe; height:70%;"></i><i style="background:#8b5cf6; height:100%;"></i>
             </div>
           </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Active Sources</span>
-            <span id="stat-sources" class="text-2xl font-bold text-slate-900 mt-2">--</span>
-            <div class="w-full bg-amber-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div class="bg-amber-500 h-full w-4/5"></div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fffbeb; color:#f59e0b;">🏢</div>
+            <div class="kpi-val">${activeSources.toLocaleString()}</div>
+            <div class="kpi-lbl">Active Sources</div>
+            <div class="kpi-sub">${S.sources.filter(x => x.enabled && !x.discovery_only).length} direct + ${S.sources.filter(x => x.enabled && x.discovery_only).length} discovery</div>
+            <div class="spark-bars">
+              <i style="background:#fde68a; height:90%;"></i><i style="background:#fde68a; height:90%;"></i>
+              <i style="background:#fde68a; height:95%;"></i><i style="background:#f59e0b; height:100%;"></i>
             </div>
           </div>
-          <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex flex-col justify-between">
-            <span class="text-xs text-slate-400 font-medium">Countries</span>
-            <span id="stat-countries" class="text-2xl font-bold text-slate-900 mt-2">--</span>
-            <div class="w-full bg-rose-100 h-1.5 rounded-full mt-3 overflow-hidden">
-              <div class="bg-rose-500 h-full w-2/3"></div>
+          <div class="kpi-card">
+            <div class="kpi-icon" style="background:#fff1f2; color:#f43f5e;">🌐</div>
+            <div class="kpi-val">${countryCount.toLocaleString()}</div>
+            <div class="kpi-lbl">Countries</div>
+            <div class="kpi-sub">with verified BA opportunities</div>
+            <div class="spark-bars">
+              <i style="background:#fecdd3; height:80%;"></i><i style="background:#fecdd3; height:70%;"></i>
+              <i style="background:#fecdd3; height:85%;"></i><i style="background:#f43f5e; height:100%;"></i>
             </div>
           </div>
-        </div>
+        </section>
       </div>
 
-      <!-- Mid Row: Trend Chart & Opportunities Map/List -->
-      <div class="grid grid-cols-12 gap-5">
-        <div class="col-span-12 lg:col-span-7 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-sm font-bold text-slate-900">Daily Run Trend (Last 7 Days)</h3>
-            <div class="flex items-center gap-3 text-[11px] text-slate-500">
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-blue-500"></span> Sourced</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Verified</span>
-              <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-indigo-500"></span> Matches</span>
+      <div class="visual-grid">
+        <section class="card-box">
+          <div class="box-header">
+            <h3>Daily Run Trend <span>(Last 7 Days)</span></h3>
+            <div class="box-legend">
+              <span><i style="background:#3b82f6;"></i>Sourced</span>
+              <span><i style="background:#10b981;"></i>Verified</span>
+              <span><i style="background:#8b5cf6;"></i>Final Matches</span>
             </div>
           </div>
-          <div class="h-64">
-            <canvas id="trendChart"></canvas>
-          </div>
-        </div>
+          <div class="chart-body">${trendHtml}</div>
+        </section>
 
-        <div class="col-span-12 lg:col-span-5 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <div class="flex items-center justify-between mb-3">
-            <h3 class="text-sm font-bold text-slate-900">Global Opportunities (Fresh Verified Matches)</h3>
-            <span class="text-[10px] text-slate-400">Top Locations</span>
+        <section class="card-box">
+          <div class="box-header">
+            <h3>Global Opportunities <span>(Fresh Verified Matches)</span></h3>
           </div>
-          <div id="location-list" class="space-y-2 my-2 overflow-y-auto max-h-56 pr-1 text-xs">
-            <!-- Dynamically populated -->
+          <div class="map-layout">
+            <div class="vector-map">
+              ${locs.slice(0, 7).map((l, i) => {
+                const positions = [["12%","26%"],["18%","54%"],["48%","18%"],["52%","38%"],["60%","56%"],["76%","66%"],["82%","82%"]];
+                const colors = ["#10b981","#3b82f6","#8b5cf6","#10b981","#f59e0b","#ec4899","#06b6d4"];
+                return `<div class="map-pin" style="left:${positions[i][0]};top:${positions[i][1]};">
+                  <i class="pin-dot" style="background:${colors[i]};"></i>
+                  <div><b>${esc(l.name)}</b><span> ${Number(l.value || 0)} jobs</span></div>
+                </div>`;
+              }).join("")}
+            </div>
+            <div class="map-rank-list">
+              <div style="font-size:10px; font-weight:800; color:#64748b; text-transform:uppercase;">Top 5 Locations</div>
+              ${locs.map((l, i) => `
+                <div class="map-rank-item">
+                  <span>${i + 1} &nbsp;${l.flag || "📍"} ${esc(l.name)}</span>
+                  <b>${l.value}</b>
+                </div>`).join("")}
+            </div>
           </div>
-          <p class="text-[10px] text-slate-400 border-t border-slate-100 pt-2 text-center">
-            Automatic filtering against aggregators & non-target roles
-          </p>
-        </div>
+        </section>
       </div>
 
-      <!-- Lower Row: 4-Window Journey, Job Type Breakdown, Top Sources -->
-      <div class="grid grid-cols-12 gap-5">
-        <!-- 4-Window Daily Journey -->
-        <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 class="text-sm font-bold text-slate-900 mb-6">Your Daily Job-Hunt Journey</h3>
-          <div class="flex items-center justify-between relative px-2">
-            <div class="absolute top-1/2 left-4 right-4 h-0.5 bg-slate-100 -translate-y-1/2 -z-0"></div>
-            <!-- Run 1: 08:00 -->
-            <div class="flex flex-col items-center relative z-10 text-center">
-              <span id="run-1-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
-              <span class="text-[11px] font-bold text-slate-800 mt-2">Run 1</span>
-              <span id="run-1-time" class="text-[10px] text-slate-400">08:00 IST</span>
-            </div>
-            <!-- Run 2: 12:00 -->
-            <div class="flex flex-col items-center relative z-10 text-center">
-              <span id="run-2-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
-              <span class="text-[11px] font-bold text-slate-800 mt-2">Run 2</span>
-              <span id="run-2-time" class="text-[10px] text-slate-400">—</span>
-            </div>
-            <!-- Run 3: 18:00 -->
-            <div class="flex flex-col items-center relative z-10 text-center">
-              <span id="run-3-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
-              <span class="text-[11px] font-bold text-slate-800 mt-2">Run 3</span>
-              <span id="run-3-time" class="text-[10px] text-slate-400">—</span>
-            </div>
-            <!-- Run 4: 21:30 -->
-            <div class="flex flex-col items-center relative z-10 text-center">
-              <span id="run-4-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
-              <span class="text-[11px] font-bold text-slate-800 mt-2">Run 4</span>
-              <span id="run-4-time" class="text-[10px] text-slate-400">—</span>
-            </div>
+      <div class="tri-grid">
+        <section class="card-box">
+          <div class="box-header">
+            <h3>Your Daily Job-Hunt Journey</h3>
           </div>
-        </div>
+          <div class="stepper">
+            ${["08:00", "12:00", "18:00", "22:00"].map((w, i) => {
+              const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
+              const now = istTime();
+              const completed = !!r && String(r.status || "").toLowerCase() === "completed";
+              const failed = !!r && !completed;
+              const upcoming = !r && w > now;
+              const stateClass = completed ? "done" : (!r && upcoming ? (i === 2 ? "active" : "") : "active");
+              const icon = completed ? "✓" : (failed ? "!" : "⏱");
+              const stateText = completed
+                ? `${Number(r.fetched_jobs || 0).toLocaleString()} jobs<br>${Number(r.eligible_jobs || 0)} matches`
+                : failed
+                  ? `<span style="color:#dc2626;">${esc(r.status || "Not completed")}</span>`
+                  : upcoming
+                    ? `<span style="color:#64748b;">Scheduled</span>`
+                    : `<span style="color:#64748b;">Not recorded</span>`;
+              return `
+                <div class="step-node ${stateClass}">
+                  <div class="step-circle">${icon}</div>
+                  <div class="step-title">Run ${i + 1}</div>
+                  <div class="step-time">${w} IST</div>
+                  <div class="step-stat">${stateText}</div>
+                </div>`;
+            }).join("")}
+          </div>
+        </section>
 
-        <!-- Breakdown Doughnut -->
-        <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
-          <h3 class="text-sm font-bold text-slate-900 mb-2">Job Type Breakdown (Fresh Matches)</h3>
-          <div class="h-44 relative flex items-center justify-center">
-            <canvas id="typeChart"></canvas>
-            <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span id="donut-total" class="text-xl font-bold text-slate-900">--</span>
-              <span id="donut-date" class="text-[10px] text-slate-400">—</span>
+        <section class="card-box">
+          <div class="box-header">
+            <h3>Job Type Breakdown <span>(Final Matches)</span></h3>
+          </div>
+          <div class="donut-box">
+            <div class="donut-ring" style="background: conic-gradient(${(()=>{let a=0;const cols=['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4'];const total=Math.max(1,types.reduce((q,x)=>q+Number(x.value||0),0));return types.map((x,i)=>{const b=a+Number(x.value||0)/total*100;const z=`${cols[i%cols.length]} ${a}% ${b}%`;a=b;return z;}).join(', ')})()});">
+              <div class="donut-center">
+                <b>${types.reduce((q,x)=>q+Number(x.value||0),0).toLocaleString()}</b>
+                <span>Jobs</span>
+              </div>
+            </div>
+            <div class="donut-legend">
+              ${types.length ? types.map((x,i)=>`<div class="donut-legend-row"><span><i style="background:${['#3b82f6','#10b981','#8b5cf6','#f59e0b','#ec4899','#06b6d4'][i%6]};"></i>${esc(x.name)}</span><b>${Number(x.value||0)}${x.pct?` (${esc(x.pct)})`:''}</b></div>`).join('') : '<div style="padding:20px;color:#94a3b8;">No job-type telemetry for this day.</div>'}
             </div>
           </div>
-        </div>
+        </section>
 
-        <!-- Top Job Sources -->
-        <div class="col-span-12 lg:col-span-4 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-          <h3 class="text-sm font-bold text-slate-900 mb-4">Top Job Sources (by fresh matches)</h3>
-          <div id="sources-breakdown" class="space-y-3 text-xs">
-            <!-- Dynamically populated -->
+        <section class="card-box">
+          <div class="box-header">
+            <h3>Top Job Sources <span>(by final matches)</span></h3>
           </div>
-        </div>
+          <div class="source-bars">
+            ${srcs.map(s => {
+              const maxS = Math.max(1, ...srcs.map(x => +x.value || 0));
+              const pct = Math.round((+s.value || 0) / maxS * 100);
+              return `
+                <div class="source-item">
+                  <div class="source-logo">${esc(s.icon || String(s.name).slice(0, 2))}</div>
+                  <div style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${esc(s.name)}</div>
+                  <div class="source-track"><div class="source-fill" style="width:${pct}%;"></div></div>
+                  <div class="source-count">${s.value}</div>
+                </div>`;
+            }).join("")}
+          </div>
+        </section>
       </div>
 
-      <!-- Bottom Row: Recent Fresh Verified BA Opportunities -->
-      <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="text-sm font-bold text-slate-900">Recent Fresh Verified BA Opportunities</h3>
-          <span class="text-xs text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer">View all →</span>
+      <section class="card-box recent-opps">
+        <div class="box-header" style="margin-bottom: 0;">
+          <h3>Recent Fresh Verified BA Opportunities</h3>
+          <button id="viewAllJobs" style="font-size: 12px; font-weight: 700; color: var(--blue);">View all →</button>
         </div>
-        <div id="job-cards-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <!-- Dynamically populated cards -->
+        <div class="recent-opps-grid">
+          ${recent.length ? recent.map(j => `
+            <div class="recent-card">
+              <div class="recent-logo">${esc(String(j.employer_name || "BA").slice(0, 2).toUpperCase())}</div>
+              <div class="recent-info">
+                <div class="recent-title">${esc(j.title)}</div>
+                <div class="recent-meta">${esc(j.employer_name)} • ${esc(j.location_text || j.region || "Global")}</div>
+                <div class="recent-tags">
+                  <span class="badge-direct">Direct</span>
+                  <span class="badge-match ${j.match_class === 'moderate' ? 'moderate' : ''}">${esc(j.match_class || 'Match')}</span>
+                  <span class="badge-time">${fmt(j.first_seen_at)}</span>
+                </div>
+              </div>
+            </div>`).join("") : '<div style="padding:24px;color:#94a3b8;grid-column:1/-1;">No verified BA opportunities recorded for this day.</div>'}
         </div>
-      </div>
+      </section>
+    </div>`;
+
+  $("viewAllJobs").onclick = () => {
+    S.page = "jobs";
+    document.querySelectorAll(".nav-link").forEach(x => x.classList.toggle("active", x.dataset.p === "jobs"));
+    render();
+  };
+}
+
+function apps(id) {
+  return S.data.applications?.find(a => a.vacancy_id === id) || null;
+}
+
+function jobs() {
+  let data = uniqueJobs();
+  $("main").innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <h1 style="font-size: 24px; font-weight: 800;">Verified Opportunities</h1>
+      <p style="font-size: 13px; color: var(--text-muted);">Direct-application Business Analyst roles that passed the engine’s gates.</p>
     </div>
-  </main>
+    <div class="tools-bar">
+      <input id="q" class="form-input" style="flex:1; min-width:240px;" placeholder="Search title, employer, or location...">
+      <select id="rg" class="form-input">
+        <option value="">All Regions</option><option>india</option><option>europe</option><option>gulf</option><option>other</option>
+      </select>
+      <select id="mc" class="form-input">
+        <option value="">All Matches</option><option>strong</option><option>moderate</option>
+      </select>
+    </div>
+    <div id="grid" style="display:grid; grid-template-columns:repeat(2, 1fr); gap:14px;"></div>`;
 
-  <!--
-    PRODUCTION CONTROL CENTRE
-    - Uses the secure ba-control-api-v3 endpoint only.
-    - Does not contain Supabase service-role credentials.
-    - Does not fabricate telemetry when the API omits a field.
-    - Secure email token is accepted via ?access=... and removed from the visible URL.
-    - Server-side token validation/expiry remains mandatory in the Edge Function.
-  -->
-  <!-- Frontend Logic & API Integration -->
-  <script>
-    const SUPABASE_URL = "https://eybjpjhzwskfgskvnfbj.supabase.co";
-    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_i6MHeeQhKDvJlJqVY7diA_AdMD3WOs";
-    const DASHBOARD_RPC = SUPABASE_URL + "/rest/v1/rpc/get_public_ba_dashboard";
-    let trendChartInstance = null;
-    let typeChartInstance = null;
-    let refreshTimer = null;
+  const paint = () => {
+    let x = data;
+    const q = $("q").value.toLowerCase(), rg = $("rg").value, mc = $("mc").value;
+    if (q) x = x.filter(j => (j.employer_name + " " + j.title + " " + j.location_text).toLowerCase().includes(q));
+    if (rg) x = x.filter(j => j.region === rg);
+    if (mc) x = x.filter(j => j.match_class === mc);
 
-    function todayIST() {
-      return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
-    }
+    $("grid").innerHTML = x.length ? x.map(j => {
+      const a = apps(j.vacancy_id);
+      return `
+        <article class="card-box" style="padding:18px;">
+          <div style="font-size:15px; font-weight:800; color:#0f172a;">${esc(j.title)}</div>
+          <div style="font-size:12px; font-weight:700; color:#475569; margin-top:2px;">${esc(j.employer_name)}</div>
+          <div style="display:flex; gap:6px; margin:10px 0; flex-wrap:wrap;">
+            <span class="badge-direct">Direct Verified</span>
+            <span class="badge-match ${j.match_class === 'moderate' ? 'moderate' : ''}">${esc(j.match_class)} • ${esc(j.match_score)}</span>
+            <span style="background:#f1f5f9; padding:2px 7px; border-radius:6px; font-size:9.5px; font-weight:700;">${esc(j.region)}</span>
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:11px; color:#64748b; margin-bottom:12px;">
+            <div>Location: <b style="color:#0f172a;">${esc(j.location_text || "—")}</b></div>
+            <div>Experience: <b style="color:#0f172a;">${esc(j.experience_min_years ?? "—")}+ yrs</b></div>
+          </div>
+          <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #f1f5f9; padding-top:12px;">
+            <select class="form-input status" data-id="${j.vacancy_id}" style="padding:6px 10px; font-size:11px;">
+              <option value="">${a ? 'Current: ' + esc(a.status) : 'Track application'}</option>
+              <option value="saved">Saved</option><option value="applied">Applied</option>
+              <option value="screening">Screening</option><option value="interview">Interview</option>
+              <option value="offer">Offer</option><option value="rejected">Rejected</option>
+            </select>
+            <a href="${esc(j.direct_apply_url)}" target="_blank" rel="noopener noreferrer" style="background:#090d16; color:#fff; font-size:11px; font-weight:700; padding:8px 14px; border-radius:8px; text-decoration:none;">Direct Application →</a>
+          </div>
+        </article>`;
+    }).join("") : `<div class="card-box" style="grid-column:1/-1; text-align:center; padding:40px; color:#94a3b8;">No matching opportunities found.</div>`;
 
-    async function loadDashboard() {
-      const params = new URLSearchParams(window.location.search);
-      const requestedDate = params.get("date");
-      const date = /^\d{4}-\d{2}-\d{2}$/.test(requestedDate || "") ? requestedDate : todayIST();
-      if (params.has("access") || params.has("token")) {
-        const clean = requestedDate ? window.location.pathname + "?date=" + encodeURIComponent(date) : window.location.pathname;
-        window.history.replaceState({}, document.title, clean);
-      }
-      try {
-        const res = await fetch(DASHBOARD_RPC, {
-          method: "POST",
-          headers: {
-            "apikey": SUPABASE_PUBLISHABLE_KEY,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({ p_date: date }),
-          cache: "no-store"
-        });
-        const raw = await res.text();
-        let payload = {};
-        try { payload = JSON.parse(raw); } catch (_) {}
-        if (!res.ok) throw new Error(payload.message || payload.error || ("HTTP " + res.status));
-        if (!payload.ok || !payload.analytics) throw new Error("Backend returned an invalid dashboard payload.");
+    document.querySelectorAll(".status").forEach(s => {
+      const a = apps(s.dataset.id);
+      if (a) s.value = a.status;
+      s.onchange = () => saveStatus(s.dataset.id, s.value);
+    });
+  };
 
-        const data = {
-          today: payload.today,
-          selectedDate: payload.selectedDate,
-          selectedSummary: payload.analytics.selectedSummary || {},
-          previousSummary: payload.analytics.previousSummary || {},
-          trend: payload.analytics.trend || [],
-          topLocations: payload.analytics.topLocations || [],
-          jobTypes: payload.analytics.jobTypes || [],
-          topSources: payload.analytics.topSources || [],
-          recent: payload.analytics.recent || [],
-          verifiedJobs: payload.analytics.verifiedJobs || [],
-          verifiedCount: payload.analytics.verifiedCount || 0,
-          strongCount: payload.analytics.strongCount || 0,
-          countryCount: payload.analytics.countryCount || 0,
-          activeSources: payload.analytics.activeSources || 0,
-          selectedRuns: payload.analytics.selectedRuns || payload.runs || [],
-          dataStateLabel: payload.dataStateLabel || "Live backend telemetry",
-          applications: payload.applications || [],
-          config: payload.config || {}
-        };
+  ["q", "rg", "mc"].forEach(id => $(id).oninput = paint);
+  paint();
+}
 
-        const status = document.getElementById("api-status");
-        if (status) status.innerText = "API: live";
-        renderDashboard(data);
-        if (refreshTimer) clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(loadDashboard, 300000);
-      } catch (err) {
-        console.error("Dashboard load failed:", err);
-        const status = document.getElementById("api-status");
-        if (status) status.innerText = "API: error";
-        document.getElementById("welcome-subtext").innerText =
-          "Unable to load live Control Centre telemetry: " + (err.message || "unknown error");
-        if (refreshTimer) clearTimeout(refreshTimer);
-        refreshTimer = setTimeout(loadDashboard, 60000);
-      }
-    }
+async function saveStatus(id, status) {
+  if (!status) return;
+  const a = apps(id);
+  try {
+    await api("", { method: "POST", body: JSON.stringify({ action: "application", vacancy_id: id, status, notes: a?.notes || null }) });
+    await load();
+    render();
+    toast("Application status updated");
+  } catch (e) { toast(e.message); }
+}
 
-    function refreshData() {
-      loadDashboard();
-    }
+function runs() {
+  $("main").innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+      <div>
+        <h1 style="font-size:24px; font-weight:800;">Run History</h1>
+        <p style="font-size:13px; color:var(--text-muted);">Automation telemetry for <b>${fmtDate(S.selectedDate)}</b> rendered in India Standard Time (IST).</p>
+      </div>
+      <button id="refreshRuns" class="login-submit-btn" style="width:auto; padding:8px 16px;">↻ Refresh Runs</button>
+    </div>
+    <div class="card-box table-responsive">
+      <table class="data-table">
+        <tr><th>Window</th><th>Status</th><th>Sources</th><th>Fetched</th><th>New</th><th>Eligible</th><th>Strong</th><th>Moderate</th><th>Errors</th><th>Finished (IST)</th></tr>
+        ${["08:00", "12:00", "18:00", "22:00"].map(w => {
+          const r = arr(S.data.runs).find(x => String(x.window_time).slice(0, 5) === w);
+          const isPending = w > istTime();
+          return `
+            <tr>
+              <td><b>${w} IST</b></td>
+              <td><span class="badge-direct" style="${isPending && !r ? 'background:#f1f5f9; color:#64748b;' : ''}">${r ? esc(r.status) : isPending ? 'Scheduled' : 'Not recorded'}</span></td>
+              <td>${r ? (r.successful_sources + '/' + r.source_count) : '—'}</td>
+              <td><b>${r?.fetched_jobs ?? '—'}</b></td>
+              <td>${r?.new_jobs ?? '—'}</td>
+              <td>${r?.eligible_jobs ?? '—'}</td>
+              <td>${r?.strong_matches ?? '—'}</td>
+              <td>${r?.moderate_matches ?? '—'}</td>
+              <td>${r?.error_count ?? '—'}</td>
+              <td>${fmt(r?.finished_at)}</td>
+            </tr>`;
+        }).join("")}
+      </table>
+    </div>`;
+  $("refreshRuns").onclick = async () => { await load(); render(); toast("Runs refreshed"); };
+}
 
-    window.addEventListener("DOMContentLoaded", loadDashboard);
-    function escapeHtml(value) {
-      return String(value ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
-    }
+function sources() {
+  $("main").innerHTML = `
+    <div style="margin-bottom:20px;">
+      <h1 style="font-size:24px; font-weight:800;">Source Network</h1>
+      <p style="font-size:13px; color:var(--text-muted);">Configured employer feeds and ATS pipelines feeding the search engine.</p>
+    </div>
+    <div class="card-box table-responsive">
+      <table class="data-table">
+        <tr><th>Employer</th><th>Provider</th><th>Region</th><th>Type</th><th>Priority</th><th>Status</th><th>Last Success</th><th>Actions</th></tr>
+        ${S.sources.map(s => `
+          <tr>
+            <td><b>${esc(s.employer_name)}</b><div style="font-size:9.5px; color:#94a3b8;">${esc(s.source_key)}</div></td>
+            <td>${esc(s.provider)}</td>
+            <td>${esc(s.region)}</td>
+            <td>${s.discovery_only ? '<span class="badge-match moderate">Discovery</span>' : '<span class="badge-direct">Direct</span>'}</td>
+            <td>${s.priority}</td>
+            <td>${s.enabled ? '<span style="color:#059669; font-weight:700;">● Enabled</span>' : '<span style="color:#94a3b8;">Disabled</span>'}</td>
+            <td>${fmt(s.last_success_at)}</td>
+            <td><button class="form-input" data-src="${s.id}" style="padding:4px 8px; font-size:10px;">${s.enabled ? 'Disable' : 'Enable'}</button></td>
+          </tr>`).join("")}
+      </table>
+    </div>`;
 
-    function renderDashboard(data) {
-      const selectedDate = data.selectedDate || data.today;
-      document.getElementById("header-date").innerText =
-        selectedDate ? new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB") : "—";
+  document.querySelectorAll("[data-src]").forEach(b => b.onclick = async () => {
+    const s = S.sources.find(x => x.id === b.dataset.src);
+    try {
+      await api("", { method: "POST", body: JSON.stringify({ action: "source_toggle", id: s.id, enabled: !s.enabled }) });
+      await load();
+      sources();
+      toast("Source status updated");
+    } catch (e) { toast(e.message); }
+  });
+}
 
-      const summary = data.selectedSummary || {};
-      document.getElementById("stat-sourced").innerText = Number(summary.sourced || 0).toLocaleString();
-      document.getElementById("stat-verified").innerText = Number(data.verifiedCount || 0).toLocaleString();
-      document.getElementById("stat-strong").innerText = Number(data.strongCount || 0).toLocaleString();
-      document.getElementById("stat-sources").innerText = Number(data.activeSources || 0).toLocaleString();
-      document.getElementById("stat-countries").innerText = Number(data.countryCount || 0).toLocaleString();
+function analytics() {
+  const trend = arr(S.analytics?.trend).slice(-7);
+  const srcs = arr(S.analytics?.topSources);
+  $("main").innerHTML = `
+    <div style="margin-bottom:20px;">
+      <h1 style="font-size:24px; font-weight:800;">Telemetry & Analytics</h1>
+      <p style="font-size:13px; color:var(--text-muted);">Deep telemetry across ingestion volume, verified opportunities and source contribution • ending ${fmtDate(S.selectedDate)}.</p>
+    </div>
+    <div class="visual-grid">
+      <section class="card-box">
+        <div class="box-header">
+          <h3>7-Day Intake Pulse</h3>
+          <div class="box-legend">
+            <span><i style="background:#3b82f6;"></i>Sourced</span>
+            <span><i style="background:#10b981;"></i>Verified</span>
+            <span><i style="background:#8b5cf6;"></i>Strong</span>
+          </div>
+        </div>
+        <div class="chart-body">
+          ${trend.length ? trend.map((x,i) => {
+            const mx = Math.max(1,...trend.map(y=>Number(y.sourced||0)));
+            return `<div class="chart-col">
+              ${i===trend.length-1?'<div class="col-highlight"></div>':''}
+              <div class="col-bar s" style="height:${Math.max(12,Math.round(Number(x.sourced||0)/mx*160))}px"><span class="col-bar-val">${Number(x.sourced||0).toLocaleString()}</span></div>
+              <div class="col-bar v" style="height:${Math.max(8,Math.round(Number(x.verified||0)/mx*160))}px"><span class="col-bar-val">${Number(x.verified||0)}</span></div>
+              <div class="col-bar m" style="height:${Math.max(6,Math.round(Number(x.verifiedStrong||0)/mx*160))}px"><span class="col-bar-val">${Number(x.verifiedStrong||0)}</span></div>
+              <span class="col-date">${fmtDate(x.date)}</span>
+            </div>`;
+          }).join("") : '<div style="padding:30px;color:#94a3b8;">No telemetry yet.</div>'}
+        </div>
+      </section>
+      <section class="card-box">
+        <div class="box-header"><h3>Source Network Performance</h3></div>
+        <div class="source-bars">
+          ${srcs.length ? srcs.map(s => {
+            const maxS = Math.max(1, ...srcs.map(x => Number(x.value || 0)));
+            return `<div class="source-item">
+              <div class="source-logo">${esc(String(s.name).slice(0,2))}</div>
+              <div style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(s.name)}</div>
+              <div class="source-track"><div class="source-fill" style="width:${Math.round(Number(s.value||0)/maxS*100)}%;"></div></div>
+              <div class="source-count">${Number(s.value||0)}</div>
+            </div>`;
+          }).join("") : '<div style="padding:20px;color:#94a3b8;">No source analytics yet.</div>'}
+        </div>
+      </section>
+    </div>`;
+}
 
-      const stateLabel = data.dataStateLabel || "Live analytics";
-      document.getElementById("welcome-subtext").innerText =
-        `${stateLabel}. Today sourced ${Number(summary.sourced || 0).toLocaleString()} opportunities and produced ${Number(data.verifiedCount || 0).toLocaleString()} verified eligible matches, including ${Number(data.strongCount || 0).toLocaleString()} strong BA matches.`;
+const csv = x => String(x || "").split(",").map(s => s.trim()).filter(Boolean);
+async function saveCfg(k, v) {
+  try {
+    await api("", { method: "POST", body: JSON.stringify({ action: "config", config_key: k, config_value: v }) });
+    await load();
+    render();
+    toast("Configuration saved: " + k);
+  } catch (e) { toast(e.message); }
+}
 
-      document.getElementById("donut-total").innerText = Number(data.verifiedCount || 0).toLocaleString();
-      const donutDate = document.getElementById("donut-date");
-      if (donutDate) donutDate.innerText = selectedDate || "—";
+function settings() {
+  const s = S.data.config.search || {}, n = S.data.config.notification || {}, r = S.data.config.retention || {};
+  $("main").innerHTML = `
+    <div style="margin-bottom:20px;">
+      <h1 style="font-size:24px; font-weight:800;">Configuration</h1>
+      <p style="font-size:13px; color:var(--text-muted);">Runtime engine parameters and criteria.</p>
+    </div>
+    <div style="display:grid; grid-template-columns:repeat(2, 1fr); gap:16px;">
+      <section class="card-box">
+        <h3 style="margin-bottom:12px;">Search Filters</h3>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div><label style="font-size:11px; font-weight:700;">Regions</label><input id="regions" class="form-input" style="width:100%;" value="${esc(arr(s.include_regions).join(', '))}"></div>
+          <div><label style="font-size:11px; font-weight:700;">Countries</label><input id="countries" class="form-input" style="width:100%;" value="${esc(arr(s.include_countries).join(', '))}"></div>
+          <button id="saveS" class="login-submit-btn" style="margin-top:8px;">Save Search Criteria</button>
+        </div>
+      </section>
+      <section class="card-box">
+        <h3 style="margin-bottom:12px;">Scoring Thresholds</h3>
+        <div style="display:flex; flex-direction:column; gap:10px;">
+          <div><label style="font-size:11px; font-weight:700;">Minimum Pass Score (0–100)</label><input id="min" type="number" class="form-input" style="width:100%;" value="${Number(s.minimum_match_score ?? 58)}"></div>
+          <div><label style="font-size:11px; font-weight:700;">Strong Score Barrier</label><input id="strong" type="number" class="form-input" style="width:100%;" value="${Number(s.strong_match_score ?? 72)}"></div>
+          <button id="saveM" class="login-submit-btn" style="margin-top:8px;">Save Matching Weights</button>
+        </div>
+      </section>
+    </div>`;
 
-      const liveSources = Array.isArray(data.topSources) ? data.topSources : [];
-      const sourcesBox = document.getElementById("sources-breakdown");
-      sourcesBox.innerHTML = liveSources.length
-        ? liveSources.map(s => {
-            const count = Number(s.value ?? s.count ?? 0);
-            return `
-              <div>
-                <div class="flex justify-between font-medium text-slate-700 mb-1">
-                  <span>${escapeHtml(s.name || "Unknown source")}</span>
-                  <span>${count.toLocaleString()}</span>
-                </div>
-                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div class="bg-indigo-600 h-full" style="width: ${Math.min(100, count * 4)}%"></div>
-                </div>
-              </div>`;
-          }).join("")
-        : `<div class="text-xs text-slate-400 py-4 text-center">No verified source telemetry returned by the API.</div>`;
+  $("saveS").onclick = () => saveCfg("search", { ...s, include_regions: csv($("regions").value), include_countries: csv($("countries").value).map(x => x.toUpperCase()) });
+  $("saveM").onclick = () => saveCfg("search", { ...s, minimum_match_score: Number($("min").value), strong_match_score: Number($("strong").value) });
+}
 
-      const liveLocations = Array.isArray(data.topLocations) ? data.topLocations : [];
-      const locBox = document.getElementById("location-list");
-      locBox.innerHTML = liveLocations.length
-        ? liveLocations.map(l => {
-            const count = Number(l.value ?? l.count ?? 0);
-            return `
-              <div class="flex justify-between items-center py-1 border-b border-slate-50">
-                <span class="text-slate-600 flex items-center gap-1.5">📍 ${escapeHtml(l.name || "Location not stated")}</span>
-                <span class="font-bold text-slate-900">${count.toLocaleString()} jobs</span>
-              </div>`;
-          }).join("")
-        : `<div class="text-xs text-slate-400 py-4 text-center">No verified location telemetry returned by the API.</div>`;
+function render() {
+  if (S.page === "overview") overview();
+  else if (S.page === "jobs") jobs();
+  else if (S.page === "runs") runs();
+  else if (S.page === "sources") sources();
+  else if (S.page === "analytics") analytics();
+  else settings();
+}
 
-      const jobs = Array.isArray(data.recent) ? data.recent : [];
-      const jobsBox = document.getElementById("job-cards-container");
-      jobsBox.innerHTML = jobs.length
-        ? jobs.slice(0, 4).map(job => `
-            <div class="border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-slate-300 transition">
-              <div>
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="w-6 h-6 rounded bg-slate-900 text-white text-[10px] font-bold flex items-center justify-center">
-                    ${escapeHtml((job.employer_name || "—").substring(0, 2).toUpperCase())}
-                  </span>
-                  <span class="text-xs font-bold text-slate-800 truncate">${escapeHtml(job.employer_name || "—")}</span>
-                </div>
-                <h4 class="text-xs font-semibold text-slate-900 line-clamp-2 mb-1">${escapeHtml(job.title || "Untitled opportunity")}</h4>
-                <p class="text-[11px] text-slate-400">${escapeHtml(job.location_text || "Location not stated")}</p>
-              </div>
-              <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${Number(job.match_score || 0) >= 72 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}">
-                  ${Number.isFinite(Number(job.match_score)) ? Number(job.match_score) : "—"} pts • ${escapeHtml(job.match_class || "eligible")}
-                </span>
-                ${job.direct_apply_url
-                  ? `<a href="${escapeHtml(job.direct_apply_url)}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Direct Apply →</a>`
-                  : `<span class="text-xs font-semibold text-slate-400">No direct link</span>`}
-              </div>
-            </div>`).join("")
-        : `<div class="col-span-4 text-center py-8 text-xs text-slate-400">No verified opportunities loaded for this date.</div>`;
-
-      renderCharts(data);
-    }
-
-    function renderCharts(data) {
-      if (trendChartInstance) trendChartInstance.destroy();
-      if (typeChartInstance) typeChartInstance.destroy();
-
-      const trend = Array.isArray(data.trend) ? data.trend : [];
-      const trendCanvas = document.getElementById("trendChart");
-      if (trendCanvas) {
-        if (trend.length === 0) {
-          trendCanvas.parentElement.innerHTML =
-            `<div class="h-64 flex items-center justify-center text-xs text-slate-400">No live trend telemetry returned by the API.</div>`;
-        } else {
-          const ctxTrend = trendCanvas.getContext("2d");
-          trendChartInstance = new Chart(ctxTrend, {
-            type: "bar",
-            data: {
-              labels: trend.map(x => x.date || ""),
-              datasets: [
-                { label: "Sourced", data: trend.map(x => Number(x.sourced || 0)), backgroundColor: "#3B82F6", borderRadius: 4 },
-                { label: "Verified", data: trend.map(x => Number(x.verified || 0)), backgroundColor: "#10B981", borderRadius: 4 },
-                { label: "Strong", data: trend.map(x => Number(x.verifiedStrong || 0)), backgroundColor: "#6366F1", borderRadius: 4 }
-              ]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: { legend: { display: false } },
-              scales: {
-                x: { grid: { display: false } },
-                y: { beginAtZero: true, grid: { color: "#f1f5f9" } }
-              }
-            }
-          });
-        }
-      }
-
-      const typeData = Array.isArray(data.jobTypes) ? data.jobTypes : [];
-      const typeCanvas = document.getElementById("typeChart");
-      if (typeCanvas) {
-        if (typeData.length === 0) {
-          typeCanvas.parentElement.innerHTML =
-            `<div class="h-44 flex items-center justify-center text-xs text-slate-400 text-center px-4">No live job-type telemetry returned by the API.</div>`;
-          document.getElementById("donut-total").innerText = "—";
-        } else {
-          const ctxType = typeCanvas.getContext("2d");
-          typeChartInstance = new Chart(ctxType, {
-            type: "doughnut",
-            data: {
-              labels: typeData.map(x => x.name || "Other"),
-              datasets: [{
-                data: typeData.map(x => Number(x.value ?? x.count ?? 0)),
-                backgroundColor: ["#3B82F6", "#6366F1", "#10B981", "#F59E0B", "#F43F5E", "#64748B"],
-                borderWidth: 0
-              }]
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              cutout: "75%",
-              plugins: { legend: { display: false } }
-            }
-          });
-        }
-      }
-
-      const windows = ["08:00", "12:00", "18:00", "21:30"];
-      const runs = Array.isArray(data.selectedRuns) ? data.selectedRuns : [];
-      windows.forEach((windowTime, index) => {
-        const el = document.getElementById(`run-${index + 1}-icon`);
-        const timeEl = document.getElementById(`run-${index + 1}-time`);
-        const run = runs.find(r => String(r.window_time || "").slice(0, 5) === windowTime);
-
-        if (timeEl) timeEl.textContent = windowTime + " IST";
-        if (!el) return;
-
-        if (!run) {
-          el.textContent = "—";
-          el.className = "w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm";
-          return;
-        }
-
-        const status = String(run.status || "").toLowerCase();
-        const ok = ["success", "completed", "complete", "succeeded"].includes(status);
-        const active = ["running", "started", "processing"].includes(status);
-
-        el.textContent = ok ? "✓" : active ? "…" : "!";
-        el.className = ok
-          ? "w-7 h-7 rounded-full bg-emerald-500 text-white flex items-center justify-center text-xs font-bold shadow-sm"
-          : active
-            ? "w-7 h-7 rounded-full bg-blue-500 text-white flex items-center justify-center text-xs font-bold shadow-sm"
-            : "w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm";
-      });
-    }
-
-  </script>
+</script>
 </body>
 </html>
