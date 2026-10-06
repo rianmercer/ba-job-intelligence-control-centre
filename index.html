@@ -192,25 +192,25 @@
             <div class="flex flex-col items-center relative z-10 text-center">
               <span id="run-1-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
               <span class="text-[11px] font-bold text-slate-800 mt-2">Run 1</span>
-              <span class="text-[10px] text-slate-400">08:00 IST</span>
+              <span id="run-1-time" class="text-[10px] text-slate-400">08:00 IST</span>
             </div>
             <!-- Run 2: 12:00 -->
             <div class="flex flex-col items-center relative z-10 text-center">
               <span id="run-2-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
               <span class="text-[11px] font-bold text-slate-800 mt-2">Run 2</span>
-              <span class="text-[10px] text-slate-400"><span id="run-1-time">—</span></span>
+              <span id="run-2-time" class="text-[10px] text-slate-400">—</span>
             </div>
             <!-- Run 3: 18:00 -->
             <div class="flex flex-col items-center relative z-10 text-center">
               <span id="run-3-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
               <span class="text-[11px] font-bold text-slate-800 mt-2">Run 3</span>
-              <span class="text-[10px] text-slate-400"><span id="run-2-time">—</span></span>
+              <span id="run-3-time" class="text-[10px] text-slate-400">—</span>
             </div>
             <!-- Run 4: 21:30 -->
             <div class="flex flex-col items-center relative z-10 text-center">
               <span id="run-4-icon" class="w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm">—</span>
               <span class="text-[11px] font-bold text-slate-800 mt-2">Run 4</span>
-              <span class="text-[10px] text-slate-400"><span id="run-3-time">—</span></span>
+              <span id="run-4-time" class="text-[10px] text-slate-400">—</span>
             </div>
           </div>
         </div>
@@ -222,7 +222,7 @@
             <canvas id="typeChart"></canvas>
             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
               <span id="donut-total" class="text-xl font-bold text-slate-900">--</span>
-              <span class="text-[10px] text-slate-400"><span id="run-4-time">—</span></span>
+              <span id="donut-date" class="text-[10px] text-slate-400">—</span>
             </div>
           </div>
         </div>
@@ -293,7 +293,8 @@
 
     async function loadDashboard() {
       try {
-        const res = await fetch(`${API_URL}?action=overview`, {
+        const date = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Kolkata" }).format(new Date());
+        const res = await fetch(`${API_URL}?resource=analytics&date=${encodeURIComponent(date)}`, {
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
@@ -309,16 +310,21 @@
         }
 
         const data = await res.json();
+        if (!res.ok || data.error) {
+          throw new Error(data.error || `Analytics API returned HTTP ${res.status}`);
+        }
+
         const apiStatus = document.getElementById("api-status");
         if (apiStatus) apiStatus.innerText = "API: live";
         renderDashboard(data);
       } catch (err) {
         console.error("Dashboard load failed:", err);
+        const apiStatus = document.getElementById("api-status");
+        if (apiStatus) apiStatus.innerText = "API: error";
         document.getElementById("welcome-subtext").innerText =
           "Unable to load live Control Centre telemetry. Check the secure link and API status, then refresh.";
       }
     }
-
     function escapeHtml(value) {
       return String(value ?? "")
         .replaceAll("&", "&amp;")
@@ -329,65 +335,60 @@
     }
 
     function renderDashboard(data) {
-      document.getElementById("header-date").innerText = data.selectedDate ? new Date(data.selectedDate + "T00:00:00").toLocaleDateString('en-GB') : "—";
+      const selectedDate = data.selectedDate || data.today;
+      document.getElementById("header-date").innerText =
+        selectedDate ? new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB") : "—";
 
-      // Metric Cards
-      if (data.overview) {
-        document.getElementById("stat-sourced").innerText = (data.overview.total_sourced || 0).toLocaleString();
-        document.getElementById("stat-verified").innerText = (data.overview.total_verified || 0).toLocaleString();
-        document.getElementById("stat-strong").innerText = (data.overview.strong_matches || 0).toLocaleString();
-        document.getElementById("stat-sources").innerText = Number.isFinite(Number(data.overview.active_sources)) ? Number(data.overview.active_sources).toLocaleString() : "—";
-        document.getElementById("stat-countries").innerText = Number.isFinite(Number(data.overview.countries_count)) ? Number(data.overview.countries_count).toLocaleString() : "—";
+      const summary = data.selectedSummary || {};
+      document.getElementById("stat-sourced").innerText = Number(summary.sourced || 0).toLocaleString();
+      document.getElementById("stat-verified").innerText = Number(data.verifiedCount || 0).toLocaleString();
+      document.getElementById("stat-strong").innerText = Number(data.strongCount || 0).toLocaleString();
+      document.getElementById("stat-sources").innerText = Number(data.activeSources || 0).toLocaleString();
+      document.getElementById("stat-countries").innerText = Number(data.countryCount || 0).toLocaleString();
 
-        document.getElementById("welcome-subtext").innerText = 
-          `Today sourced ${(data.overview.total_sourced || 0).toLocaleString()} opportunities and produced ${(data.overview.total_verified || 0).toLocaleString()} eligible matches, including ${(data.overview.strong_matches || 0).toLocaleString()} strong BA matches.`;
-        document.getElementById("donut-total").innerText = data.overview.total_verified || 0;
-      }
+      const stateLabel = data.dataStateLabel || "Live analytics";
+      document.getElementById("welcome-subtext").innerText =
+        `${stateLabel}. Today sourced ${Number(summary.sourced || 0).toLocaleString()} opportunities and produced ${Number(data.verifiedCount || 0).toLocaleString()} verified eligible matches, including ${Number(data.strongCount || 0).toLocaleString()} strong BA matches.`;
 
-      // Top Sources Progress
+      document.getElementById("donut-total").innerText = Number(data.verifiedCount || 0).toLocaleString();
+      const donutDate = document.getElementById("donut-date");
+      if (donutDate) donutDate.innerText = selectedDate || "—";
+
+      const liveSources = Array.isArray(data.topSources) ? data.topSources : [];
       const sourcesBox = document.getElementById("sources-breakdown");
-      sourcesBox.innerHTML = "";
-      const liveSources = Array.isArray(data.sources) ? data.sources : [];
-      if (liveSources.length === 0) {
-        sourcesBox.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">No live source telemetry returned by the API.</div>`;
-      }
-      liveSources.forEach(s => {
-        sourcesBox.innerHTML += `
-          <div>
-            <div class="flex justify-between font-medium text-slate-700 mb-1">
-              <span>${s.name}</span>
-              <span>${s.count}</span>
-            </div>
-            <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div class="bg-indigo-600 h-full" style="width: ${Math.min(100, s.count * 4)}%"></div>
-            </div>
-          </div>`;
-      });
+      sourcesBox.innerHTML = liveSources.length
+        ? liveSources.map(s => {
+            const count = Number(s.value ?? s.count ?? 0);
+            return `
+              <div>
+                <div class="flex justify-between font-medium text-slate-700 mb-1">
+                  <span>${escapeHtml(s.name || "Unknown source")}</span>
+                  <span>${count.toLocaleString()}</span>
+                </div>
+                <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div class="bg-indigo-600 h-full" style="width: ${Math.min(100, count * 4)}%"></div>
+                </div>
+              </div>`;
+          }).join("")
+        : `<div class="text-xs text-slate-400 py-4 text-center">No verified source telemetry returned by the API.</div>`;
 
-      // Global Locations
+      const liveLocations = Array.isArray(data.topLocations) ? data.topLocations : [];
       const locBox = document.getElementById("location-list");
-      locBox.innerHTML = "";
-      const liveLocations = Array.isArray(data.locations) ? data.locations : [];
-      if (liveLocations.length === 0) {
-        locBox.innerHTML = `<div class="text-xs text-slate-400 py-4 text-center">No live location telemetry returned by the API.</div>`;
-      }
-      liveLocations.forEach(l => {
-        locBox.innerHTML += `
-          <div class="flex justify-between items-center py-1 border-b border-slate-50">
-            <span class="text-slate-600 flex items-center gap-1.5">📍 ${l.loc}</span>
-            <span class="font-bold text-slate-900">${l.count} jobs</span>
-          </div>`;
-      });
+      locBox.innerHTML = liveLocations.length
+        ? liveLocations.map(l => {
+            const count = Number(l.value ?? l.count ?? 0);
+            return `
+              <div class="flex justify-between items-center py-1 border-b border-slate-50">
+                <span class="text-slate-600 flex items-center gap-1.5">📍 ${escapeHtml(l.name || "Location not stated")}</span>
+                <span class="font-bold text-slate-900">${count.toLocaleString()} jobs</span>
+              </div>`;
+          }).join("")
+        : `<div class="text-xs text-slate-400 py-4 text-center">No verified location telemetry returned by the API.</div>`;
 
-      // Verified Opportunities
+      const jobs = Array.isArray(data.recent) ? data.recent : [];
       const jobsBox = document.getElementById("job-cards-container");
-      jobsBox.innerHTML = "";
-      const jobs = data.recent_jobs || [];
-      if (jobs.length === 0) {
-        jobsBox.innerHTML = `<div class="col-span-4 text-center py-8 text-xs text-slate-400">No active opportunities loaded yet for today.</div>`;
-      } else {
-        jobs.slice(0, 4).forEach(job => {
-          jobsBox.innerHTML += `
+      jobsBox.innerHTML = jobs.length
+        ? jobs.slice(0, 4).map(job => `
             <div class="border border-slate-200 rounded-xl p-4 flex flex-col justify-between hover:border-slate-300 transition">
               <div>
                 <div class="flex items-center gap-2 mb-2">
@@ -397,21 +398,19 @@
                   <span class="text-xs font-bold text-slate-800 truncate">${escapeHtml(job.employer_name || "—")}</span>
                 </div>
                 <h4 class="text-xs font-semibold text-slate-900 line-clamp-2 mb-1">${escapeHtml(job.title || "Untitled opportunity")}</h4>
-                <p class="text-[11px] text-slate-400">${escapeHtml(job.location_text || 'Location not stated')}</p>
+                <p class="text-[11px] text-slate-400">${escapeHtml(job.location_text || "Location not stated")}</p>
               </div>
               <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${job.match_score >= 72 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}">
+                <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${Number(job.match_score || 0) >= 72 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}">
                   ${Number.isFinite(Number(job.match_score)) ? Number(job.match_score) : "—"} pts • ${escapeHtml(job.match_class || "eligible")}
                 </span>
                 ${job.direct_apply_url
                   ? `<a href="${escapeHtml(job.direct_apply_url)}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-indigo-600 hover:text-indigo-800">Direct Apply →</a>`
                   : `<span class="text-xs font-semibold text-slate-400">No direct link</span>`}
               </div>
-            </div>`;
-        });
-      }
+            </div>`).join("")
+        : `<div class="col-span-4 text-center py-8 text-xs text-slate-400">No verified opportunities loaded for this date.</div>`;
 
-      // Charts
       renderCharts(data);
     }
 
@@ -419,90 +418,76 @@
       if (trendChartInstance) trendChartInstance.destroy();
       if (typeChartInstance) typeChartInstance.destroy();
 
-      const trend = Array.isArray(data.trend)
-        ? data.trend
-        : (Array.isArray(data.daily_trend) ? data.daily_trend : []);
-
-      const trendLabels = trend.map(x => x.date || x.label || "");
-      const sourced = trend.map(x => Number(x.sourced ?? x.total_sourced ?? 0));
-      const verified = trend.map(x => Number(x.verified ?? x.total_verified ?? 0));
-      const matches = trend.map(x => Number(x.matches ?? x.strong_matches ?? x.final_matches ?? 0));
-
+      const trend = Array.isArray(data.trend) ? data.trend : [];
       const trendCanvas = document.getElementById("trendChart");
-      if (trend.length === 0) {
-        trendCanvas.parentElement.innerHTML =
-          `<div class="h-64 flex items-center justify-center text-xs text-slate-400">No live trend telemetry returned by the API.</div>`;
-      } else {
-        const ctxTrend = trendCanvas.getContext("2d");
-        trendChartInstance = new Chart(ctxTrend, {
-          type: "bar",
-          data: {
-            labels: trendLabels,
-            datasets: [
-              { label: "Sourced", data: sourced, backgroundColor: "#3B82F6", borderRadius: 4 },
-              { label: "Verified", data: verified, backgroundColor: "#10B981", borderRadius: 4 },
-              { label: "Matches", data: matches, backgroundColor: "#6366F1", borderRadius: 4 }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-              x: { grid: { display: false } },
-              y: { beginAtZero: true, grid: { color: "#f1f5f9" } }
+      if (trendCanvas) {
+        if (trend.length === 0) {
+          trendCanvas.parentElement.innerHTML =
+            `<div class="h-64 flex items-center justify-center text-xs text-slate-400">No live trend telemetry returned by the API.</div>`;
+        } else {
+          const ctxTrend = trendCanvas.getContext("2d");
+          trendChartInstance = new Chart(ctxTrend, {
+            type: "bar",
+            data: {
+              labels: trend.map(x => x.date || ""),
+              datasets: [
+                { label: "Sourced", data: trend.map(x => Number(x.sourced || 0)), backgroundColor: "#3B82F6", borderRadius: 4 },
+                { label: "Verified", data: trend.map(x => Number(x.verified || 0)), backgroundColor: "#10B981", borderRadius: 4 },
+                { label: "Strong", data: trend.map(x => Number(x.verifiedStrong || 0)), backgroundColor: "#6366F1", borderRadius: 4 }
+              ]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: { legend: { display: false } },
+              scales: {
+                x: { grid: { display: false } },
+                y: { beginAtZero: true, grid: { color: "#f1f5f9" } }
+              }
             }
-          }
-        });
+          });
+        }
       }
 
-      const typeData = Array.isArray(data.job_type_breakdown)
-        ? data.job_type_breakdown
-        : (Array.isArray(data.type_breakdown) ? data.type_breakdown : []);
-
+      const typeData = Array.isArray(data.jobTypes) ? data.jobTypes : [];
       const typeCanvas = document.getElementById("typeChart");
-      if (typeData.length === 0) {
-        typeCanvas.parentElement.innerHTML =
-          `<div class="h-44 flex items-center justify-center text-xs text-slate-400 text-center px-4">No live job-type telemetry returned by the API.</div>`;
-        document.getElementById("donut-total").innerText = "—";
-      } else {
-        const ctxType = typeCanvas.getContext("2d");
-        typeChartInstance = new Chart(ctxType, {
-          type: "doughnut",
-          data: {
-            labels: typeData.map(x => x.label || x.name || "Unknown"),
-            datasets: [{
-              data: typeData.map(x => Number(x.count ?? x.value ?? 0)),
-              backgroundColor: ["#3B82F6", "#6366F1", "#10B981", "#F59E0B", "#F43F5E", "#64748B"],
-              borderWidth: 0
-            }]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: "75%",
-            plugins: { legend: { display: false } }
-          }
-        });
-        document.getElementById("donut-total").innerText =
-          typeData.reduce((sum, x) => sum + Number(x.count ?? x.value ?? 0), 0).toLocaleString();
+      if (typeCanvas) {
+        if (typeData.length === 0) {
+          typeCanvas.parentElement.innerHTML =
+            `<div class="h-44 flex items-center justify-center text-xs text-slate-400 text-center px-4">No live job-type telemetry returned by the API.</div>`;
+          document.getElementById("donut-total").innerText = "—";
+        } else {
+          const ctxType = typeCanvas.getContext("2d");
+          typeChartInstance = new Chart(ctxType, {
+            type: "doughnut",
+            data: {
+              labels: typeData.map(x => x.name || "Other"),
+              datasets: [{
+                data: typeData.map(x => Number(x.value ?? x.count ?? 0)),
+                backgroundColor: ["#3B82F6", "#6366F1", "#10B981", "#F59E0B", "#F43F5E", "#64748B"],
+                borderWidth: 0
+              }]
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              cutout: "75%",
+              plugins: { legend: { display: false } }
+            }
+          });
+        }
       }
 
-      // Run telemetry and schedule are authoritative from the Supabase API.
-      const runs = Array.isArray(data.runs) ? data.runs : [];
-      const engineConfig = data && data.config && typeof data.config.engine === "object" ? data.config.engine : {};
-      const dailyWindows = Array.isArray(engineConfig.daily_windows) && engineConfig.daily_windows.length
-        ? engineConfig.daily_windows.map(w => String(w).slice(0,5)).filter(w => /^\\d{2}:\\d{2}$/.test(w))
-        : [];
-      [1,2,3,4].forEach(n => {
-        const timeEl = document.getElementById("run-" + n + "-time");
-        if (timeEl) timeEl.textContent = dailyWindows[n-1] ? dailyWindows[n-1] + " IST" : "—";
-      });
+      const windows = ["08:00", "12:00", "18:00", "21:30"];
+      const runs = Array.isArray(data.selectedRuns) ? data.selectedRuns : [];
+      windows.forEach((windowTime, index) => {
+        const el = document.getElementById(`run-${index + 1}-icon`);
+        const timeEl = document.getElementById(`run-${index + 1}-time`);
+        const run = runs.find(r => String(r.window_time || "").slice(0, 5) === windowTime);
 
-      [1, 2, 3, 4].forEach(n => {
-        const el = document.getElementById(`run-${n}-icon`);
+        if (timeEl) timeEl.textContent = windowTime + " IST";
         if (!el) return;
-        const run = runs.find(r => Number(r.run_number ?? r.run ?? r.sequence) === n);
+
         if (!run) {
           el.textContent = "—";
           el.className = "w-7 h-7 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-xs font-bold shadow-sm";
@@ -521,6 +506,7 @@
             : "w-7 h-7 rounded-full bg-amber-500 text-white flex items-center justify-center text-xs font-bold shadow-sm";
       });
     }
+
   </script>
 </body>
 </html>
