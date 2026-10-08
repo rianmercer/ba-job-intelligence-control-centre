@@ -537,16 +537,30 @@ async function publicDashboard(date) {
   return payload;
 }
 
-async function secureOverview(date) {
+async function secureResource(resource, date) {
   if (!accessToken) return null;
-  const res = await fetch(CONTROL_API + "?resource=overview&date=" + encodeURIComponent(date), {
-    headers: { "x-ba-control-key": accessToken, "Cache-Control": "no-cache" },
-    cache: "no-store"
-  });
-  if (!res.ok) return null;
-  const body = await res.json();
-  if (body?.error) return null;
-  return body;
+  try {
+    const res = await fetch(
+      CONTROL_API + "?resource=" + encodeURIComponent(resource) + "&date=" + encodeURIComponent(date),
+      {
+        headers: {
+          "x-ba-control-key": accessToken,
+          "Cache-Control": "no-cache"
+        },
+        cache: "no-store"
+      }
+    );
+    if (!res.ok) return null;
+    const body = await res.json();
+    if (body?.error) return null;
+    return body;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function secureOverview(date) {
+  return await secureResource("overview", date);
 }
 
 async function api(resource, options = {}) {
@@ -584,31 +598,70 @@ async function load(date = S.selectedDate) {
   S.selectedDate = date || S.selectedDate;
   S.data = null; S.analytics = null; S.jobs = []; S.sources = [];
 
-  const payload = await publicDashboard(S.selectedDate);
-  S.analytics = payload.analytics || {};
-  S.jobs = S.analytics.verifiedJobs || payload.jobs || [];
-  S.data = {
-    today: payload.today,
-    selectedDate: payload.selectedDate,
-    jobs: payload.jobs || [],
-    applications: payload.applications || [],
-    runs: payload.runs || [],
-    digest: payload.digest || null,
-    health: payload.health || null,
-    config: payload.config || {}
-  };
-  S.sources = payload.sources || [];
+  // EOD email links carry a short-lived access token. Use the secure control API
+  // as the primary data path for those links so a transient/public-RPC CORS failure
+  // cannot blank the whole dashboard.
+  if (accessToken) {
+    const [secured, securedAnalytics, securedSources] = await Promise.all([
+      secureOverview(S.selectedDate),
+      secureResource("analytics", S.selectedDate),
+      secureResource("sources", S.selectedDate)
+    ]);
 
-  // A valid EOD access token unlocks private application/application-workflow
-  // telemetry and privileged controls. The normal dashboard remains passwordless.
-  const secured = await secureOverview(S.selectedDate);
-  if (secured) {
-    S.data.applications = secured.applications || S.data.applications;
-    S.data.config = secured.config || S.data.config;
-    S.data.health = secured.health || S.data.health;
-    S.data.digest = secured.digest || S.data.digest;
-    S.data.runs = secured.runs || S.data.runs;
+    if (secured && securedAnalytics && securedSources) {
+      S.analytics = securedAnalytics || {};
+      S.jobs = S.analytics.verifiedJobs || secured.jobs || [];
+      S.sources = securedSources.sources || [];
+      S.data = {
+        today: S.analytics.today || secured.today,
+        selectedDate: S.analytics.selectedDate || secured.selectedDate,
+        jobs: secured.jobs || [],
+        applications: secured.applications || [],
+        runs: secured.runs || [],
+        digest: secured.digest || null,
+        health: secured.health || null,
+        config: secured.config || {}
+      };
+      return;
+    }
   }
+
+  // Passwordless/public route remains the normal fallback for direct visits.
+  let publicError = null;
+  try {
+    const payload = await publicDashboard(S.selectedDate);
+    S.analytics = payload.analytics || {};
+    S.jobs = S.analytics.verifiedJobs || payload.jobs || [];
+    S.data = {
+      today: payload.today,
+      selectedDate: payload.selectedDate,
+      jobs: payload.jobs || [],
+      applications: payload.applications || [],
+      runs: payload.runs || [],
+      digest: payload.digest || null,
+      health: payload.health || null,
+      config: payload.config || {}
+    };
+    S.sources = payload.sources || [];
+
+    // A valid EOD access token can still enrich the passwordless payload with
+    // private workflow telemetry and privileged controls.
+    if (accessToken) {
+      const secured = await secureOverview(S.selectedDate);
+      if (secured) {
+        S.data.applications = secured.applications || S.data.applications;
+        S.data.config = secured.config || S.data.config;
+        S.data.health = secured.health || S.data.health;
+        S.data.digest = secured.digest || S.data.digest;
+        S.data.runs = secured.runs || S.data.runs;
+      }
+    }
+    return;
+  } catch (e) {
+    publicError = e;
+  }
+
+  throw publicError || new Error("Could not load the live dashboard.");
 }
 
 async function refreshDashboard(date = S.selectedDate, successMessage = "Dashboard refreshed") {
@@ -633,6 +686,18 @@ function boot() {
     toast(accessToken ? "Live Supabase dashboard connected" : "Live public dashboard connected");
   }).catch(e => {
     console.error("BA Control Centre boot:", e);
+    renderShell();
+    $("main").innerHTML = `
+      <section class="card-box" style="max-width:760px;margin:70px auto;text-align:center;padding:42px;">
+        <div style="font-size:34px;margin-bottom:12px;">⚠️</div>
+        <h1 style="font-size:22px;font-weight:800;margin-bottom:8px;">Dashboard connection failed</h1>
+        <p style="font-size:13px;line-height:1.6;color:#64748b;margin-bottom:18px;">
+          The live Supabase data endpoint could not be reached from this browser session.
+          Your backend and dashboard code are still intact.
+        </p>
+        <button id="retryBoot" class="login-submit-btn" style="width:auto;padding:10px 18px;">↻ Retry connection</button>
+      </section>`;
+    $("retryBoot").onclick = () => { location.reload(); };
     toast("Could not load live Supabase dashboard: " + (e.message || "unknown error"));
   });
 }
