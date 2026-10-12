@@ -507,7 +507,11 @@ const fmtDate = d => new Date(d + "T00:00:00+05:30").toLocaleDateString("en-IN",
 const istTime = () => new Intl.DateTimeFormat("en-GB", { timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
 const snapshotLabel = () => S.selectedDate ? fmtDate(S.selectedDate) + " (IST)" : "Selected day";
 const accessParams = new URLSearchParams(location.search);
-const accessToken = accessParams.get("access") || accessParams.get("token") || "";
+const urlAccessToken = accessParams.get("access") || accessParams.get("token") || "";
+// Keep the short-lived control token in this tab so a browser refresh does not
+// silently downgrade the dashboard to public/stale metrics after the URL is cleaned.
+if (urlAccessToken) sessionStorage.setItem("ba_control_access", urlAccessToken);
+const accessToken = urlAccessToken || sessionStorage.getItem("ba_control_access") || "";
 if (accessToken) {
   accessParams.delete("access");
   accessParams.delete("token");
@@ -544,8 +548,7 @@ async function secureResource(resource, date) {
       CONTROL_API + "?resource=" + encodeURIComponent(resource) + "&date=" + encodeURIComponent(date),
       {
         headers: {
-          "x-ba-control-key": accessToken,
-          "Cache-Control": "no-cache"
+          "x-ba-control-key": accessToken
         },
         cache: "no-store"
       }
@@ -624,6 +627,8 @@ async function load(date = S.selectedDate) {
       };
       return;
     }
+    // Never silently display the older public metrics when a secure email link was used.
+    throw new Error("Secure dashboard data could not be loaded. Reopen the latest Control Centre link from your email and retry.");
   }
 
   // Passwordless/public route remains the normal fallback for direct visits.
